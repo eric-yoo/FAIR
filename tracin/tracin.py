@@ -15,8 +15,8 @@ import datetime
 import matplotlib.pyplot as plt
 import functools
 import sys
-sys.path.insert(0, "./resnet50")
-import resnet
+sys.path.insert(0, "./simpleNN")
+import network
 #@title Dataset Utils
 import numpy as np
 import copy
@@ -24,19 +24,23 @@ from tensorflow.keras.datasets import mnist
 import time
 BATCH_SIZE = 512
 
+strategy = tf.distribute.OneDeviceStrategy(device="/gpu:0")
+
 count = 0
 def generate_id():
-  global count
-  fileid = tf.constant(count, dtype=tf.int32)
-  count+=1
-  return fileid
+    global count
+    print(count)
+    fileid = tf.constant(count, dtype=tf.int64)
+    # print('\n\n\n\n\n\n???????????\n\n\n','fileid')
+    count+=1
+    return fileid
 
-def _train_filename2id(filename):
-  filename = tf.strings.regex_replace(filename, "n", "")
-  filename = tf.strings.regex_replace(filename, ".JPEG", "")
-  filename_split = tf.strings.split(filename, "_")
-  fileid = tf.strings.to_number(filename_split, tf.int32)
-  return fileid
+# def _train_filename2id(filename):
+#   filename = tf.strings.regex_replace(filename, "n", "")
+#   filename = tf.strings.regex_replace(filename, ".JPEG", "")
+#   filename_split = tf.strings.split(filename, "_")
+#   fileid = tf.strings.to_number(filename_split, tf.int32)
+#   return fileid
 
 # def _val_filename2id(filename):
 #   filename = tf.strings.regex_replace(filename, "ILSVRC2012_val_", "")
@@ -148,48 +152,15 @@ def _train_filename2id(filename):
 
 
 
-def _preprocess(inputs, split='train', image_size=224, crop_padding=32):
+def _preprocess(inputs, split='train'):
   """Apply image preprocessing."""
-  # print(inputs.keys())
-  # print(fileid)
-  # if fileid >=2:
-    # quit()
   image = inputs['image']
   label = inputs['label']
   if split == 'train':
+    # print(1)
     fileid = generate_id()
   else:      
     fileid = generate_id()
-  # shape = tf.shape(image)
-  # image_height = shape[0]
-  # image_width = shape[1]
-
-  # padded_center_crop_size = tf.cast(
-  #     ((image_size / (image_size + crop_padding)) *
-  #      tf.cast(tf.minimum(image_height, image_width), tf.float32)),
-  #     tf.int32)
-
-  # offset_height = ((image_height - padded_center_crop_size) + 1) // 2
-  # offset_width = ((image_width - padded_center_crop_size) + 1) // 2
-  # crop_window = tf.stack([offset_height, offset_width,
-  #                         padded_center_crop_size, padded_center_crop_size])
-  
-  # image = tf.image.crop_to_bounding_box(
-  #       image,
-  #       offset_height=offset_height,
-  #       offset_width=offset_width,
-  #       target_height=padded_center_crop_size,
-  #       target_width=padded_center_crop_size)
-  # image = _resize_image(image_bytes=image,
-  #                       height=image_size,
-  #                       width=image_size)
-  # image = mean_image_subtraction(
-  #       image, MEAN_RGB)
-  # image = standardize_image(
-  #       image, STDDEV_RGB)
-
-  # image = tf.cast(image, tf.float32)
-  # label = tf.cast(label, tf.int32)
   return fileid, image, label  
 
 
@@ -207,11 +178,12 @@ def make_get_dataset(split, batch_size):
         as_supervised=False,
         shuffle_files=False,
         read_config=read_config)
-    
-    ds = ds.map(_preprocess_fn,
-                num_parallel_calls=tf.data.experimental.AUTOTUNE)
-    ds = ds.batch(batch_size)
 
+    indices_range = {'train':range(60000), 'test':range(60000, 70000)}
+    indices =  tf.data.Dataset.from_tensor_slices(list(indices_range[split]))
+    ds = tf.data.Dataset.zip((indices, ds))
+
+    ds = ds.batch(batch_size)
     ds = ds.prefetch(tf.data.experimental.AUTOTUNE)
     return ds
   return get_dataset() 
@@ -337,9 +309,8 @@ def get_trackin_grad(ds):
   probs_np = []
   predicted_labels_np = []
   for d in ds:
-    print(type(d))
-    # quit()
-    imageids_replicas, loss_grads_replica, activations_replica, labels_replica, probs_replica, predictied_labels_replica = run(d,)
+    # print('\n\n\n\n\n\n\n',type(d))
+    imageids_replicas, loss_grads_replica, activations_replica, labels_replica, probs_replica, predictied_labels_replica = strategy.run(run, args=(d,))
     for imageids, loss_grads, activations, labels, probs, predicted_labels in zip(
         strategy.experimental_local_results(imageids_replicas), 
         strategy.experimental_local_results(loss_grads_replica),
@@ -355,6 +326,7 @@ def get_trackin_grad(ds):
       labels_np.append(labels.numpy())
       probs_np.append(probs.numpy())
       predicted_labels_np.append(predicted_labels.numpy()) 
+  # print(image_ids_np)
   return {'image_ids': np.concatenate(image_ids_np),
           'loss_grads': np.concatenate(loss_grads_np),
           'activations': np.concatenate(activations_np),
@@ -365,8 +337,9 @@ def get_trackin_grad(ds):
 
 @tf.function
 def run(inputs):
-  print('\n\n\n\n\ninput')
-  imageids, images, labels = inputs
+  imageids, data = inputs
+  images = data['image']
+  labels = data['label']
   # ignore bias for simplicity
   loss_grads = []
   activations = []
@@ -374,7 +347,7 @@ def run(inputs):
     h = mp(images)
     logits = ml(h)
     probs = tf.nn.softmax(logits)
-    loss_grad = tf.one_hot(labels, 1000) - probs
+    loss_grad = tf.one_hot(labels, 10) - probs
     activations.append(h)
     loss_grads.append(loss_grad)
 
@@ -385,27 +358,27 @@ def run(inputs):
 
 
 
-### load mnist
-(train_xs, train_ys), (test_xs, test_ys) = mnist.load_data()
-train_xs = train_xs / 255.
-test_xs = test_xs / 255.
-train_xs = train_xs.reshape(-1, 28 * 28)
-test_xs = test_xs.reshape(-1, 28 * 28)
+# ### load mnist
+# (train_xs, train_ys), (test_xs, test_ys) = mnist.load_data()
+# train_xs = train_xs / 255.
+# test_xs = test_xs / 255.
+# train_xs = train_xs.reshape(-1, 28 * 28)
+# test_xs = test_xs.reshape(-1, 28 * 28)
 
-### create biased mnist
-train_ys_corrupted = np.copy(train_ys)
-np.random.seed(12345)
-idxs = np.random.choice(range(len(train_ys_corrupted)), size=len(train_ys_corrupted)//5, replace=False)
-train_ys_corrupted[idxs] = 2
+# ### create biased mnist
+# train_ys_corrupted = np.copy(train_ys)
+# np.random.seed(12345)
+# idxs = np.random.choice(range(len(train_ys_corrupted)), size=len(train_ys_corrupted)//5, replace=False)
+# train_ys_corrupted[idxs] = 2
 
 
 models_penultimate = []
 models_last = []
 for i in [30, 60, 90]:
-  model = resnet.resnet50(1000)
-#     model.load_weights(CHECKPOINTS_PATH_FORMAT.format(i))
-  models_penultimate.append(tf.keras.Model(model.layers[0].input, model.layers[-3].output))
-  models_last.append(model.layers[-2])
+  model = network.model()
+  # model.load_weights(CHECKPOINTS_PATH_FORMAT.format(i))
+  models_penultimate.append(tf.keras.Model(model.layers[0].input, model.layers[-2].output))
+  models_last.append(model.layers[-1])
     
     
 ds_train = make_get_dataset('train', BATCH_SIZE)
@@ -418,7 +391,7 @@ end = time.time()
 print(datetime.timedelta(seconds=end - start))
 
 
-ds_val = make_get_dataset('validation', BATCH_SIZE)
+ds_val = make_get_dataset('test', BATCH_SIZE)
 
 # ds_val = zip(list(range(len(test_xs))),test_xs, test_ys)
 start = time.time()
