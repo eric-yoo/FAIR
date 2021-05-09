@@ -1,5 +1,10 @@
 MNIST_TFDS_DIR = "tensorflow_datasets" #@param {type:"string"}
 CHECKPOINTS_PATH_FORMAT = "../simpleNN/ckpt{}" #@param {type:"string"}
+DEBUG = False
+
+def debug(s):
+  if DEBUG:
+    print(s)
 
 # @title Imports
 import tensorflow as tf
@@ -74,7 +79,7 @@ try:
     model = network.model()
     model.load_weights(CHECKPOINTS_PATH_FORMAT.format(i))
 except:
-  print('need train.')
+  debug('need train.')
   model = network.model()
   model.compile(
     optimizer=tf.keras.optimizers.Adam(0.001),
@@ -162,8 +167,8 @@ def find_and_show(trackin_dict, idx, vector='influence', idx_filename_mapping=No
     op, pp = find(trackin_dict['loss_grads'][idx], None)
   else:
     raise ValueError('Unsupported vector type.')
-  print('Query image from test: ')
-  print('label: {}, prob: {}, predicted_label: {}'.format(
+  debug('Query image from test: ')
+  debug('label: {}, prob: {}, predicted_label: {}'.format(
       index_to_classname[trackin_dict['labels'][idx]], 
       trackin_dict['probs'][idx][0], 
       index_to_classname[trackin_dict['predicted_labels'][idx][0]]))
@@ -172,27 +177,27 @@ def find_and_show(trackin_dict, idx, vector='influence', idx_filename_mapping=No
   plt.imshow(img)
   plt.show()
     
-  print("="*50)  
-  print('Proponents: ')
+  debug("="*50)  
+  debug('Proponents: ')
   for p in pp:
-    print('label: {}, prob: {}, predicted_label: {}, influence: {}'.format(p[3], p[1], p[2], p[4]))
+    debug('label: {}, prob: {}, predicted_label: {}, influence: {}'.format(p[3], p[1], p[2], p[4]))
     if p[5] and p[6]:
-      print('error_similarity: {}, encoding_similarity: {}'.format(p[5], p[6]))
+      debug('error_similarity: {}, encoding_similarity: {}'.format(p[5], p[6]))
     img = get_image('train', p[0])
     if img is not None:
       plt.imshow(img, interpolation='nearest')
       plt.show()  
-  print("="*50)
-  print('Opponents: ')
+  debug("="*50)
+  debug('Opponents: ')
   for o in op:
-    print('label: {}, prob: {}, predicted_label: {}, influence: {}'.format(o[3], o[1], o[2], o[4]))
+    debug('label: {}, prob: {}, predicted_label: {}, influence: {}'.format(o[3], o[1], o[2], o[4]))
     if o[5] and o[6]:
-      print('error_similarity: {}, encoding_similarity: {}'.format(o[5], o[6]))
+      debug('error_similarity: {}, encoding_similarity: {}'.format(o[5], o[6]))
     img = get_image('train', o[0])
     if img is not None:
       plt.imshow(img, interpolation='nearest')
       plt.show()
-  print("="*50)
+  debug("="*50)
 
 
 def get_trackin_grad(ds):
@@ -265,7 +270,7 @@ labels = list(trackin_train['labels'])
 for i,id in enumerate(ids):
   index_to_classname[id] = labels[i]
 end = time.time()
-print(datetime.timedelta(seconds=end - start))
+debug(datetime.timedelta(seconds=end - start))
 
 start = time.time()
 trackin_test = get_trackin_grad(ds_test)
@@ -274,6 +279,6 @@ labels = list(trackin_test['labels'])
 for i,id in enumerate(ids):
   index_to_classname[id] = labels[i]
 end = time.time()
-print(datetime.timedelta(seconds=end - start))
+debug(datetime.timedelta(seconds=end - start))
 
 find_and_show(trackin_test, 8, 'influence')
