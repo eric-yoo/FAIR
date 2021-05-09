@@ -1,6 +1,6 @@
 MNIST_TFDS_DIR = "tensorflow_datasets" #@param {type:"string"}
-CHECKPOINTS_PATH_FORMAT = "../simpleNN/ckpt{}" #@param {type:"string"}
-DEBUG = False
+CHECKPOINTS_PATH_FORMAT = "simpleNN/ckpt{}" #@param {type:"string"}
+DEBUG = True
 
 def debug(s):
   if DEBUG:
@@ -18,7 +18,7 @@ import datetime
 import matplotlib.pyplot as plt
 import functools
 import sys
-sys.path.insert(0, "../simpleNN")
+sys.path.insert(0, "simpleNN")
 import network
 #@title Dataset Utils
 import numpy as np
