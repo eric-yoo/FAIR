@@ -2,7 +2,7 @@ import tensorflow.compat.v1 as tf
 import numpy as np
 import copy
 from tensorflow.keras.datasets import mnist
-from label_bias.label_bias import *
+from label_bias.main import *
 
 ### load mnist
 (train_xs, train_ys), (test_xs, test_ys) = mnist.load_data()
