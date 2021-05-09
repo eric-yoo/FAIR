@@ -1,6 +1,5 @@
-CHECKPOINTS_PATH_FORMAT = "simpleNN/ckpt{}" #@param {type:"string"}
+CHECKPOINTS_PATH_FORMAT = "simpleNN/ckpt{}" 
 
-# @title Imports
 import tensorflow as tf
 import matplotlib.image as mpimg
 import io
@@ -11,8 +10,7 @@ import datetime
 import matplotlib.pyplot as plt
 import functools
 import sys
-sys.path.insert(0, "simpleNN")
-import network
+from simpleNN import network
 import numpy as np
 import copy
 from tensorflow.keras.datasets import mnist
