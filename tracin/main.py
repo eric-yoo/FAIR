@@ -1,16 +1,8 @@
-import tensorflow as tf
-import matplotlib.image as mpimg
-import io
-import json
-import numpy as np
-import time
-import datetime
 import matplotlib.pyplot as plt
-import functools
-import sys
-from simpleNN import network
 import numpy as np
-import time
+import tensorflow as tf
+
+from simpleNN import network
 
 
 class TracIn:

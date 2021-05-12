@@ -1,10 +1,12 @@
 BATCH_SIZE = 128
+
+import numpy as np
 #import tensorflow.compat.v1 as tf
 #tf.disable_v2_behavior()
 import tensorflow as tf
-import numpy as np
-import copy
+
 from simpleNN import network
+
 
 def weight_variable(shape, name="weight_variable"):
   """weight_variable generates a weight variable of a given shape."""

@@ -14,8 +14,8 @@
 # ==============================================================================
 """Preprocessing functions for images."""
 from typing import Text, Tuple
-import tensorflow as tf
 
+import tensorflow as tf
 
 # Calculated from the ImageNet training set
 MEAN_RGB = (0.485 * 255, 0.456 * 255, 0.406 * 255)

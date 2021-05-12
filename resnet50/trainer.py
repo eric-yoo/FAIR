@@ -15,19 +15,15 @@
 """Runs an Image Classification model."""
 
 import os
-from typing import Any, Text, List, Mapping
-
-from absl import app
-from absl import flags
-from absl import logging
+from typing import Any, List, Mapping, Text
 
 import tensorflow as tf
+from absl import app, flags, logging
 
 import distribution_utils
 import imagenet
 import learning_rate
 import resnet
-
 
 flags.DEFINE_string(
     'model_dir', None,

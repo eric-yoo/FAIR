@@ -3,6 +3,7 @@ MNIST_TFDS_DIR = "tfds" #@param {type:"string"}
 import tensorflow as tf
 import tensorflow_datasets as tfds
 
+
 def make_get_dataset(split, batch_size, with_index=True):
     def get_dataset() -> tf.data.Dataset:
         builder = tfds.builder(name='mnist', data_dir=MNIST_TFDS_DIR)
