@@ -1,4 +1,4 @@
-CHECKPOINTS_PATH_FORMAT = "simpleNN/ckpt{}" 
+CHECKPOINTS_PATH_FORMAT = "simpleNN/lb1_ckpt{}" 
 BATCH_SIZE = 512
 
 from tfds.main import make_get_dataset

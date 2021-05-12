@@ -1,3 +1,4 @@
+BATCH_SIZE = 128
 #import tensorflow.compat.v1 as tf
 #tf.disable_v2_behavior()
 import tensorflow as tf
@@ -23,11 +24,7 @@ def run_simple_NN(X,
                   X_test,
                   y_test,
                   weights,
-                  num_iter=10000,
-                  learning_rate=0.001,
-                  batch_size=128,
-                  display_steps=1000,
-                  n_layers=1,
+                  it,
                   verbose = False
                  ):
 
@@ -35,7 +32,7 @@ def run_simple_NN(X,
   n_features = X.shape[1]
   weights_ = weights / (1. * np.sum(weights))
   
-  model = network.model(num_classes=10, batch_size=batch_size)
+  model = network.model(num_classes=10, batch_size=BATCH_SIZE)
   model.compile(
       optimizer=tf.keras.optimizers.Adam(0.001),
       loss=tf.keras.losses.SparseCategoricalCrossentropy(from_logits=True),
@@ -44,10 +41,10 @@ def run_simple_NN(X,
 
   print("Xshape{}, Yshape{}, Xtype{}, Ytype{}".format(X.shape, y.shape, type(X), type(y)))
 
-  CHECKPOINTS_PATH_FORMAT = "simpleNN/ckpt{}"
-  for i in range(3):
+  CHECKPOINTS_PATH_FORMAT = "simpleNN/lb{}_ckpt{}"
+  for i in range(1, 4):
       model.fit(X, y)
-      model.save_weights(CHECKPOINTS_PATH_FORMAT.format(i))
+      model.save_weights(CHECKPOINTS_PATH_FORMAT.format(it, i))
 
   training_prediction = model.evaluate(X,y)
   testing_prediction = model.evaluate(X_test, y_test)
