@@ -32,8 +32,8 @@ pip install -r requirements
 - [x] add id column in dataset (need to check)
 - [x] implement mlp instead of resnet in tracin (see tracin branch)
 - [x] refactor tracin (see main branch)
-- [ ] fix tracin model issue (labels don't match actual numbers)
-- [ ] use tf2 in label_bias, check compatibility with tracin
+- [X] fix tracin model issue (labels don't match actual numbers)
+- [X] use tf2 in label_bias, check compatibility with tracin
 - [ ] add preprocessing in tracin data
 - [ ] integrate label_bias and tracin (naive, violation_tracin)
 - [ ] experiment tracin with biased mnist
