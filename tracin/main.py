@@ -10,8 +10,6 @@ import functools
 import sys
 from simpleNN import network
 import numpy as np
-import copy
-from tensorflow.keras.datasets import mnist
 import time
 
 
@@ -19,7 +17,7 @@ class TracIn:
     def __init__(self, ds_train, ds_test, ckpt1='', ckpt2='', ckpt3='', verbose=True):
         self.verbose = verbose
         self.strategy = tf.distribute.OneDeviceStrategy(device="/gpu:0")
-        self.index_to_classname = {}
+        # self.index_to_classname = {}
 
         # dataset
         self.ds_train = ds_train
@@ -50,23 +48,31 @@ class TracIn:
             self.models_last.append(model.layers[-2])
         
         self.trackin_train = self.get_trackin_grad(self.ds_train)
-        # print(self.trackin_train['predicted_labels']); quit()
         ids = list(self.trackin_train['image_ids'])
         labels = list(self.trackin_train['labels'])
-        for i,id in enumerate(ids):
-            self.index_to_classname[id] = labels[i]
+        # for i,id in enumerate(ids):
+            # self.index_to_classname[id] = labels[i]
         
         self.trackin_test = self.get_trackin_grad(self.ds_test)
         ids = list(self.trackin_test['image_ids'])
         labels = list(self.trackin_test['labels'])
-        for i,id in enumerate(ids):
-            self.index_to_classname[id] = labels[i]
+        
+        # print(self.trackin_test.keys()) #['image_ids', 'loss_grads', 'activations', 'labels', 'probs', 'predicted_labels']
+        # print('\nDEBUG')
+        # print(self.trackin_test['image_ids'][1])
+        # print(self.trackin_test['labels'][1])
+        # plt.imshow(self.trackin_test['images'][1].reshape((28,28)))
+        # plt.show()
+
+        # for i,id in enumerate(ids):
+        #     self.index_to_classname[id] = labels[i]
 
     def debug(self, s):
         if self.verbose:
             print(s)
 
     def get_trackin_grad(self, ds):
+        images_np = []
         image_ids_np = []
         loss_grads_np = []
         activations_np = []
@@ -74,8 +80,9 @@ class TracIn:
         probs_np = []
         predicted_labels_np = []
         for d in ds:
-            imageids_replicas, loss_grads_replica, activations_replica, labels_replica, probs_replica, predictied_labels_replica = self.strategy.run(self.run, args=(d,))
-            for imageids, loss_grads, activations, labels, probs, predicted_labels in zip(
+            images_replicas, imageids_replicas, loss_grads_replica, activations_replica, labels_replica, probs_replica, predictied_labels_replica = self.strategy.run(self.run, args=(d,))
+            for images, imageids, loss_grads, activations, labels, probs, predicted_labels in zip(
+                self.strategy.experimental_local_results(images_replicas), 
                 self.strategy.experimental_local_results(imageids_replicas), 
                 self.strategy.experimental_local_results(loss_grads_replica),
                 self.strategy.experimental_local_results(activations_replica), 
@@ -84,13 +91,15 @@ class TracIn:
                 self.strategy.experimental_local_results(predictied_labels_replica)):
                 if imageids.shape[0] == 0:
                     continue
+                images_np.append(images.numpy())
                 image_ids_np.append(imageids.numpy())
                 loss_grads_np.append(loss_grads.numpy())
                 activations_np.append(activations.numpy())
                 labels_np.append(labels.numpy())
                 probs_np.append(probs.numpy())
                 predicted_labels_np.append(predicted_labels.numpy())
-        return {'image_ids': np.concatenate(image_ids_np),
+        return {'images': np.concatenate(images_np),
+                'image_ids': np.concatenate(image_ids_np),
                 'loss_grads': np.concatenate(loss_grads_np),
                 'activations': np.concatenate(activations_np),
                 'labels': np.concatenate(labels_np),
@@ -117,8 +126,7 @@ class TracIn:
 
         # Using probs from last checkpoint
         probs, predicted_labels = tf.math.top_k(probs, k=1)
-
-        return imageids, tf.stack(loss_grads, axis=-1), tf.stack(activations, axis=-1), labels, probs, predicted_labels
+        return images, imageids, tf.stack(loss_grads, axis=-1), tf.stack(activations, axis=-1), labels, probs, predicted_labels
 
 
     def find(self, loss_grad=None, activation=None, topk=50):
@@ -147,8 +155,8 @@ class TracIn:
             proponents.append((
                 self.trackin_train['image_ids'][index],
                 self.trackin_train['probs'][index][0],
-                self.index_to_classname[self.trackin_train['predicted_labels'][index][0]],
-                self.index_to_classname[self.trackin_train['labels'][index]], 
+                self.trackin_train['predicted_labels'][index][0],
+                self.trackin_train['labels'][index], 
                 scores[index],
                 scores_lg[index] if scores_lg else None,
                 scores_a[index] if scores_a else None))
@@ -156,26 +164,26 @@ class TracIn:
             opponents.append((
                 self.trackin_train['image_ids'][index],
                 self.trackin_train['probs'][index][0],
-                self.index_to_classname[self.trackin_train['predicted_labels'][index][0]],
-                self.index_to_classname[self.trackin_train['labels'][index]],
+                self.trackin_train['predicted_labels'][index][0],
+                self.trackin_train['labels'][index],
                 scores[index],
                 scores_lg[index] if scores_lg else None,
                 scores_a[index] if scores_a else None))  
         return opponents, proponents
 
-    def get_image(self, split, id):
-        if split == 'test':
-            for batch in self.ds_test:
-                # print(batch[0])
-                index = tf.where(batch[0] == id)
-                if index.shape[0] == 1:
-                    return (batch[1]['image'][index.numpy()[0][0]]).numpy().reshape((28,28))
+    # def get_image(self, split, id):
+    #     if split == 'test':
+    #         for batch in self.ds_test:
+    #             # print(batch[0])
+    #             index = tf.where(batch[0] == id)
+    #             if index.shape[0] == 1:
+    #                 return (batch[1]['image'][index.numpy()[0][0]]).numpy().reshape((28,28))
 
-        else:
-            for batch in self.ds_train:
-                index = tf.where(batch[0] == id)
-                if index.shape[0] == 1:
-                    return (batch[1]['image'][index.numpy()[0][0]]).numpy().reshape((28,28))
+    #     else:
+    #         for batch in self.ds_train:
+    #             index = tf.where(batch[0] == id)
+    #             if index.shape[0] == 1:
+    #                 return (batch[1]['image'][index.numpy()[0][0]]).numpy().reshape((28,28))
                 
 
     def find_and_show(self, trackin_dict, idx, vector='influence'):
@@ -189,24 +197,22 @@ class TracIn:
             raise ValueError('Unsupported vector type.')
         self.debug('Query image from test: ')
         self.debug('label: {}, prob: {}, predicted_label: {}'.format(
-            self.index_to_classname[trackin_dict['labels'][idx]], 
+            trackin_dict['labels'][idx], 
             trackin_dict['probs'][idx][0], 
-            self.index_to_classname[trackin_dict['predicted_labels'][idx][0]]))
-        
-        img = self.get_image('test', trackin_dict['image_ids'][idx])
+            trackin_dict['predicted_labels'][idx][0]))
+        # img = self.get_image('test', trackin_dict['image_ids'][idx])
+        img = self.trackin_test['images'][idx].reshape((28,28))
         plt.imshow(img)
         plt.show()
             
         self.debug("="*50)  
         self.debug('3 Proponents: ')
         for p in pp[:3]:
-            for i in p:
-                print(i, end='\t')
-            print()
             self.debug('label: {}, prob: {}, predicted_label: {}, influence: {}'.format(p[3], p[1], p[2], p[4]))
             if p[5] and p[6]:
                 self.debug('error_similarity: {}, encoding_similarity: {}'.format(p[5], p[6]))
-            img = self.get_image('train', p[0])
+            # img = self.get_image('train', p[0])
+            img = self.trackin_train['images'][p[0]].reshape((28,28))
             if img is not None:
                 plt.imshow(img, interpolation='nearest')
                 plt.show()  
@@ -216,7 +222,8 @@ class TracIn:
             self.debug('label: {}, prob: {}, predicted_label: {}, influence: {}'.format(o[3], o[1], o[2], o[4]))
             if o[5] and o[6]:
                 self.debug('error_similarity: {}, encoding_similarity: {}'.format(o[5], o[6]))
-            img = self.get_image('train', o[0])
+            # img = self.get_image('train', o[0])
+            img = self.trackin_train['images'][o[0]].reshape((28,28))
             if img is not None:
                 plt.imshow(img, interpolation='nearest')
                 plt.show()
