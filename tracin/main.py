@@ -1,3 +1,5 @@
+CHECKPOINTS_PATH_FORMAT = "simpleNN/ckpt{}" 
+
 import matplotlib.pyplot as plt
 import numpy as np
 import tensorflow as tf
@@ -17,7 +19,7 @@ class TracIn:
 
         # model
         if '' in [ckpt1, ckpt2, ckpt3]:
-            raise NotImplementedError
+            # raise NotImplementedError
             self.debug('need train.')
             model = network.model()
             model.compile(
@@ -29,6 +31,9 @@ class TracIn:
                 for d in self.ds_train:
                     model.fit(d[1]['image'], d[1]['label'])
                 model.save_weights(CHECKPOINTS_PATH_FORMAT.format(i))
+            ckpt1 = CHECKPOINTS_PATH_FORMAT.format(1)
+            ckpt2 = CHECKPOINTS_PATH_FORMAT.format(2)
+            ckpt3 = CHECKPOINTS_PATH_FORMAT.format(3)
         # split model into two parts
         self.models_penultimate = []
         self.models_last = []
