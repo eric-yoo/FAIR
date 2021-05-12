@@ -1,5 +1,3 @@
-CHECKPOINTS_PATH_FORMAT = "simpleNN/ckpt{}" 
-
 import tensorflow as tf
 import matplotlib.image as mpimg
 import io
@@ -18,7 +16,7 @@ import time
 
 
 class TracIn:
-    def __init__(self, ds_train, ds_test, verbose=True):
+    def __init__(self, ds_train, ds_test, ckpt1='', ckpt2='', ckpt3='', verbose=True):
         self.verbose = verbose
         self.strategy = tf.distribute.OneDeviceStrategy(device="/gpu:0")
         self.index_to_classname = {}
@@ -28,11 +26,8 @@ class TracIn:
         self.ds_test = ds_test
 
         # model
-        try:
-            for i in [1, 2, 3]:
-                model = network.model()
-                model.load_weights(CHECKPOINTS_PATH_FORMAT.format(i))
-        except:
+        if '' in [ckpt1, ckpt2, ckpt3]:
+            raise NotImplementedError
             self.debug('need train.')
             model = network.model()
             model.compile(
@@ -44,16 +39,15 @@ class TracIn:
                 for d in self.ds_train:
                     model.fit(d[1]['image'], d[1]['label'])
                 model.save_weights(CHECKPOINTS_PATH_FORMAT.format(i))
-
         # split model into two parts
         self.models_penultimate = []
         self.models_last = []
 
-        for i in [1, 2, 3]:
+        for ckpt in [ckpt1, ckpt2, ckpt3]:
             model = network.model()
-            model.load_weights(CHECKPOINTS_PATH_FORMAT.format(i)).expect_partial()
-            self.models_penultimate.append(tf.keras.Model(model.layers[0].input, model.layers[-2].output))
-            self.models_last.append(model.layers[-1])
+            model.load_weights(ckpt).expect_partial()
+            self.models_penultimate.append(tf.keras.Model(model.layers[0].input, model.layers[-3].output))
+            self.models_last.append(model.layers[-2])
         
         self.trackin_train = self.get_trackin_grad(self.ds_train)
         # print(self.trackin_train['predicted_labels']); quit()
@@ -206,6 +200,9 @@ class TracIn:
         self.debug("="*50)  
         self.debug('3 Proponents: ')
         for p in pp[:3]:
+            for i in p:
+                print(i, end='\t')
+            print()
             self.debug('label: {}, prob: {}, predicted_label: {}, influence: {}'.format(p[3], p[1], p[2], p[4]))
             if p[5] and p[6]:
                 self.debug('error_similarity: {}, encoding_similarity: {}'.format(p[5], p[6]))
