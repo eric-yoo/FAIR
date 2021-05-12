@@ -1,8 +1,9 @@
-import tensorflow.compat.v1 as tf
-tf.disable_v2_behavior()
+#import tensorflow.compat.v1 as tf
+#tf.disable_v2_behavior()
+import tensorflow as tf
 import numpy as np
 import copy
-
+from simpleNN import network
 
 def weight_variable(shape, name="weight_variable"):
   """weight_variable generates a weight variable of a given shape."""
@@ -29,65 +30,83 @@ def run_simple_NN(X,
                   n_layers=1,
                   verbose = False
                  ):
+
   n_labels = np.max(y) + 1
   n_features = X.shape[1]
   weights_ = weights / (1. * np.sum(weights))
-  x = tf.placeholder(tf.float32, [None, n_features])
-  y_ = tf.placeholder(tf.float32, [None, n_labels])
   
-  N = 512
+  model = network.model(num_classes=10, batch_size=batch_size)
+  model.compile(
+      optimizer=tf.keras.optimizers.Adam(0.001),
+      loss=tf.keras.losses.SparseCategoricalCrossentropy(from_logits=True),
+      metrics=[tf.keras.metrics.SparseCategoricalAccuracy()],
+  )
+
+  print("Xshape{}, Yshape{}, Xtype{}, Ytype{}".format(X.shape, y.shape, type(X), type(y)))
+
+  CHECKPOINTS_PATH_FORMAT = "simpleNN/ckpt{}"
+  for i in range(3):
+      model.fit(X, y)
+      model.save_weights(CHECKPOINTS_PATH_FORMAT.format(i))
+
+  training_prediction = model.evaluate(X,y)
+  testing_prediction = model.evaluate(X_test, y_test)
+
+  return training_prediction, testing_prediction
   
-  W_1 = weight_variable([784, N])
-  b_1 = bias_variable([N])
+  #N = 512
+  
+  #W_1 = weight_variable([784, N])
+  #b_1 = bias_variable([N])
 
-  h_1 = tf.nn.relu(tf.matmul(x, W_1) + b_1)
+  #h_1 = tf.nn.relu(tf.matmul(x, W_1) + b_1)
 
-  W_2 = weight_variable([N, N])
-  b_2 = bias_variable([N])
+  #W_2 = weight_variable([N, N])
+  #b_2 = bias_variable([N])
 
-  h_2 = tf.nn.relu(tf.matmul(h_1, W_2) + b_2)
+  #h_2 = tf.nn.relu(tf.matmul(h_1, W_2) + b_2)
 
-  W_3 = weight_variable([N, N])
-  b_3 = bias_variable([N])
+  #W_3 = weight_variable([N, N])
+  #b_3 = bias_variable([N])
 
-  h_3 = tf.nn.relu(tf.matmul(h_2, W_3) + b_3)
+  #h_3 = tf.nn.relu(tf.matmul(h_2, W_3) + b_3)
 
-  W_4 = weight_variable([N, 10])
-  b_4 = bias_variable([10])
+  #W_4 = weight_variable([N, 10])
+  #b_4 = bias_variable([10])
 
-  NN_logits =tf.nn.softmax(tf.matmul(h_3, W_4) + b_4)
+  #NN_logits =tf.nn.softmax(tf.matmul(h_3, W_4) + b_4)
 
-  loss = -tf.reduce_mean(tf.reduce_sum(y_ *tf.log(NN_logits+1e-6),1),0)
-  acc = tf.reduce_mean(
-      tf.cast(tf.equal(tf.arg_max(NN_logits,1), tf.arg_max(y_,1)), "float"))
-  train_step = tf.train.AdamOptimizer().minimize(loss)
-  correct_prediction = tf.equal(tf.argmax(NN_logits, 1), tf.argmax(y_, 1))
-  accuracy = tf.reduce_mean(tf.cast(correct_prediction, tf.float32))
+  #loss = -tf.reduce_mean(tf.reduce_sum(y_ *tf.log(NN_logits+1e-6),1),0)
+  #acc = tf.reduce_mean(
+  #    tf.cast(tf.equal(tf.arg_max(NN_logits,1), tf.arg_max(y_,1)), "float"))
+  #train_step = tf.train.AdamOptimizer().minimize(loss)
+  #correct_prediction = tf.equal(tf.argmax(NN_logits, 1), tf.argmax(y_, 1))
+  #accuracy = tf.reduce_mean(tf.cast(correct_prediction, tf.float32))
 
-  def one_hot(ns):
-    return np.eye(n_labels)[ns]
+  #def one_hot(ns):
+  #  return np.eye(n_labels)[ns]
 
-  y_onehot = one_hot(y)
-  y_test_onehot = one_hot(y_test)
+  #y_onehot = one_hot(y)
+  #y_test_onehot = one_hot(y_test)
 
-  with tf.Session() as sess:
-    print('\n[start training]\n')
-    sess.run(tf.global_variables_initializer())
-    for i in range(num_iter):
-      ns = np.random.choice(range(len(X)), size=50, replace=True, p=weights_)
-      if (i + 1) % display_steps == 0:
-        train_accuracy = accuracy.eval(feed_dict={x: X, y_: y_onehot})
-        test_accuracy = accuracy.eval(feed_dict={x: X_test, y_: y_test_onehot})
+  #with tf.Session() as sess:
+  #  print('\n[start training]\n')
+  #  sess.run(tf.global_variables_initializer())
+  #  for i in range(num_iter):
+  #    ns = np.random.choice(range(len(X)), size=50, replace=True, p=weights_)
+  #    if (i + 1) % display_steps == 0:
+  #      train_accuracy = accuracy.eval(feed_dict={x: X, y_: y_onehot})
+  #      test_accuracy = accuracy.eval(feed_dict={x: X_test, y_: y_test_onehot})
 
-        if verbose:
-            print("step %d, training accuracy %g, test accuracy %g" %
-              (i + 1, train_accuracy, test_accuracy))
-      train_step.run(
-          feed_dict={x: X[ns, :], y_: y_onehot[ns, :]})
+  #      if verbose:
+  #          print("step %d, training accuracy %g, test accuracy %g" %
+  #            (i + 1, train_accuracy, test_accuracy))
+  #    train_step.run(
+  #        feed_dict={x: X[ns, :], y_: y_onehot[ns, :]})
 
-    testing_prediction = tf.argmax(NN_logits, 1).eval(feed_dict={x: X_test})
-    training_prediction = tf.argmax(NN_logits, 1).eval(feed_dict={x: X})
-    return training_prediction, testing_prediction
+  #  testing_prediction = tf.argmax(NN_logits, 1).eval(feed_dict={x: X_test})
+  #  training_prediction = tf.argmax(NN_logits, 1).eval(feed_dict={x: X})
+  #  return training_prediction, testing_prediction
 
 
 def debias_weights(original_labels, protected_attributes, multipliers):

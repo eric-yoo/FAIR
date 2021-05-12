@@ -2,13 +2,18 @@ import numpy as np
 import copy
 from tensorflow.keras.datasets import mnist
 from label_bias.main import *
+from tracin.main import TracIn
 
 ### load mnist
 (train_xs, train_ys), (test_xs, test_ys) = mnist.load_data()
-train_xs = train_xs / 255.
-test_xs = test_xs / 255.
-train_xs = train_xs.reshape(-1, 28 * 28)
-test_xs = test_xs.reshape(-1, 28 * 28)
+train_xs = train_xs.astype("float32") / 255.
+test_xs = test_xs.astype("float32") / 255.
+
+train_ys = train_ys.astype("float32")
+test_ys = test_ys.astype("float32")
+
+#train_xs = train_xs.reshape(-1, 28 * 28)
+#test_xs = test_xs.reshape(-1, 28 * 28)
 
 ### create biased mnist
 train_ys_corrupted = np.copy(train_ys)
@@ -55,5 +60,10 @@ for it in range(n_iters):
     train_prediction, test_predictions = run_simple_NN(train_xs, train_ys_corrupted, test_xs, test_ys, weights)
     violation = np.mean(train_prediction == 2) - 0.1
     multipliers -= learning_rate * violation
+
+    ### get Tracin multiplier ###
+    #multiplier_TI = TracIn(train_xs, train_ys_corrupted).self_influence_tester()
+    
+
     print()
     print()
