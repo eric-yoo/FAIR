@@ -11,8 +11,7 @@ class TracIn:
     def __init__(self, ds_train, ds_test, ckpt1='', ckpt2='', ckpt3='', verbose=True):
         self.verbose = verbose
         self.strategy = tf.distribute.OneDeviceStrategy(device="/gpu:0")
-        # self.index_to_classname = {}
-
+        
         # dataset
         self.ds_train = ds_train
         self.ds_test = ds_test
@@ -27,7 +26,7 @@ class TracIn:
                 loss=tf.keras.losses.SparseCategoricalCrossentropy(from_logits=True),
                 metrics=[tf.keras.metrics.SparseCategoricalAccuracy()],
             )
-            for i in range(1,5):
+            for i in range(1,11):
                 for d in self.ds_train:
                     model.fit(d[1]['image'], d[1]['label'])
                 model.save_weights(CHECKPOINTS_PATH_FORMAT.format(i))
@@ -37,32 +36,20 @@ class TracIn:
         # split model into two parts
         self.models_penultimate = []
         self.models_last = []
+        self.models = []
 
         for ckpt in [ckpt1, ckpt2, ckpt3]:
             model = network.model()
             model.load_weights(ckpt).expect_partial()
             self.models_penultimate.append(tf.keras.Model(model.layers[0].input, model.layers[-3].output))
             self.models_last.append(model.layers[-2])
+            self.models.append(model)
         
         self.trackin_train = self.get_trackin_grad(self.ds_train)
-        ids = list(self.trackin_train['image_ids'])
-        labels = list(self.trackin_train['labels'])
-        # for i,id in enumerate(ids):
-            # self.index_to_classname[id] = labels[i]
         
         self.trackin_test = self.get_trackin_grad(self.ds_test)
-        ids = list(self.trackin_test['image_ids'])
-        labels = list(self.trackin_test['labels'])
         
-        # print(self.trackin_test.keys()) #['image_ids', 'loss_grads', 'activations', 'labels', 'probs', 'predicted_labels']
-        # print('\nDEBUG')
-        # print(self.trackin_test['image_ids'][1])
-        # print(self.trackin_test['labels'][1])
-        # plt.imshow(self.trackin_test['images'][1].reshape((28,28)))
-        # plt.show()
-
-        # for i,id in enumerate(ids):
-        #     self.index_to_classname[id] = labels[i]
+        self.trackin_train_self_influences = self.get_self_influence(ds_train)
 
     def debug(self, s):
         if self.verbose:
@@ -104,6 +91,59 @@ class TracIn:
                 'predicted_labels': np.concatenate(predicted_labels_np)
                 }    
 
+
+    def get_self_influence(self, ds):
+        images_np = []
+        image_ids_np = []
+        self_influences_np = []
+        labels_np = []
+        probs_np = []
+        predicted_labels_np = []
+        for d in ds:
+            images_replicas, imageids_replicas, self_influences_replica, labels_replica, probs_replica, predictied_labels_replica = self.strategy.run(self.run_self_influence, args=(d,))  
+            for images, imageids, self_influences, labels, probs, predicted_labels in zip(
+                self.strategy.experimental_local_results(images_replicas), 
+                self.strategy.experimental_local_results(imageids_replicas), 
+                self.strategy.experimental_local_results(self_influences_replica), 
+                self.strategy.experimental_local_results(labels_replica), 
+                self.strategy.experimental_local_results(probs_replica), 
+                self.strategy.experimental_local_results(predictied_labels_replica)):
+                if imageids.shape[0] == 0:
+                    continue
+                images_np.append(images.numpy())
+                image_ids_np.append(imageids.numpy())
+                self_influences_np.append(self_influences.numpy())
+                labels_np.append(labels.numpy())
+                probs_np.append(probs.numpy())
+                predicted_labels_np.append(predicted_labels.numpy()) 
+        return {'images': np.concatenate(images_np),
+                'image_ids': np.concatenate(image_ids_np),
+                'self_influences': np.concatenate(self_influences_np),
+                'labels': np.concatenate(labels_np),
+                'probs': np.concatenate(probs_np),
+                'predicted_labels': np.concatenate(predicted_labels_np)
+                }    
+
+    @tf.function
+    def run_self_influence(self, inputs):
+        imageids, data = inputs
+        images = data['image']
+        labels = data['label']
+        self_influences = []
+        for m in self.models:
+            with tf.GradientTape(watch_accessed_variables=False) as tape:
+                tape.watch(m.trainable_weights[-2:])
+                probs = m(images)
+                loss = tf.keras.losses.sparse_categorical_crossentropy(labels, probs)
+            grads = tape.jacobian(loss, m.trainable_weights[-2:])
+            scores = tf.add_n([tf.math.reduce_sum(
+                grad * grad, axis=tf.range(1, tf.rank(grad), 1)) 
+                for grad in grads])
+            self_influences.append(scores)  
+
+        # Using probs from last checkpoint
+        probs, predicted_labels = tf.math.top_k(probs, k=1)
+        return images, imageids, tf.math.reduce_sum(tf.stack(self_influences, axis=-1), axis=-1), labels, probs, predicted_labels
 
     @tf.function
     def run(self, inputs):
@@ -168,20 +208,6 @@ class TracIn:
                 scores_a[index] if scores_a else None))  
         return opponents, proponents
 
-    # def get_image(self, split, id):
-    #     if split == 'test':
-    #         for batch in self.ds_test:
-    #             # print(batch[0])
-    #             index = tf.where(batch[0] == id)
-    #             if index.shape[0] == 1:
-    #                 return (batch[1]['image'][index.numpy()[0][0]]).numpy().reshape((28,28))
-
-    #     else:
-    #         for batch in self.ds_train:
-    #             index = tf.where(batch[0] == id)
-    #             if index.shape[0] == 1:
-    #                 return (batch[1]['image'][index.numpy()[0][0]]).numpy().reshape((28,28))
-                
 
     def find_and_show(self, trackin_dict, idx, vector='influence'):
         if vector == 'influence':
@@ -225,3 +251,18 @@ class TracIn:
                 plt.imshow(img, interpolation='nearest')
                 plt.show()
         self.debug("="*50)
+    
+    def show_self_influence(self, trackin_self_influence, topk=50):
+        self_influence_scores = trackin_self_influence['self_influences']
+        indices = np.argsort(-self_influence_scores)
+        for i, index in enumerate(indices[:topk]):
+            print('example {} (index: {})'.format(i, index))
+            print('label: {}, prob: {}, predicted_label: {}'.format(
+                trackin_self_influence['labels'][index], 
+                trackin_self_influence['probs'][index][0], 
+                trackin_self_influence['predicted_labels'][index][0]))
+            # img = get_image(trackin_self_influence['image_ids'][index])
+            img = self.trackin_train_self_influences['images'][index].reshape((28,28))
+            if img is not None:
+                plt.imshow(img, interpolation='nearest')
+                plt.show()

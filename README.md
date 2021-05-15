@@ -35,7 +35,7 @@ pip install -r requirements
 - [X] fix tracin model issue (labels don't match actual numbers)
 - [X] use tf2 in label_bias, check compatibility with tracin
 - [X] add preprocessing in tracin data
-- [ ] implement tracin self-influence
+- [X] implement tracin self-influence
 - [ ] experiment tracin with biased mnist
-- [ ] experiment label_bias -> traacin with biased mnist
+- [ ] experiment label_bias -> tracin with biased mnist
 - [ ] integrate label_bias and tracin (naive, violation_tracin)
