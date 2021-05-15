@@ -272,3 +272,26 @@ class TracIn:
             if img is not None:
                 plt.imshow(img, interpolation='nearest')
                 plt.show()
+
+
+    def report_mislabel_detection(self, trackin_self_influence, num_dots=10):
+        self_influence_scores = trackin_self_influence['self_influences']
+        indices = np.argsort(-self_influence_scores)
+        mislabel_detection_report = {}
+        detected_mislabels = 0
+        for i, index in enumerate(indices):
+            # self.debug('example {} (index: {})'.format(i, index))
+            # self.debug('correct_label: {}, label: {}, prob: {}, predicted_label: {}'.format(
+            #     trackin_self_influence['correct_labels'][index],
+            #     trackin_self_influence['labels'][index], 
+            #     trackin_self_influence['probs'][index][0], 
+            #     trackin_self_influence['predicted_labels'][index][0]))
+            if trackin_self_influence['correct_labels'][index] != trackin_self_influence['labels'][index]:
+                detected_mislabels += 1
+            if i % (len(indices)//num_dots) == 0 or i == len(indices) -1:
+                fraction_checked = (i+1) / len(indices)
+                # print(fraction_checked, detected_mislabels)
+                mislabel_detection_report[fraction_checked] = detected_mislabels
+        mislabel_detection_report = {round(k,4):round(v/detected_mislabels,4) for k,v in mislabel_detection_report.items()}
+        plt.plot(list(mislabel_detection_report.keys()), list(mislabel_detection_report.values()))
+        plt.show()

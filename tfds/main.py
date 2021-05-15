@@ -42,7 +42,7 @@ def make_get_dataset(split, batch_size, with_index=True, is_corrupt=True):
             assert split == 'train'
             np.random.seed(0)
             masks = np.zeros((60000,), int)
-            mask_indices = np.random.choice(range(60000), size=60000//5, replace=False)
+            mask_indices = np.random.choice(range(60000), size=60000//10, replace=False)
             masks[mask_indices] = 1
             corrupt_indices = tf.convert_to_tensor(masks, tf.int64)
             ds = ds.map(lambda index, data: (index, corrupt(index, data, corrupt_indices)))
