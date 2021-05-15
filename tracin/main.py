@@ -26,7 +26,7 @@ class TracIn:
                 loss=tf.keras.losses.SparseCategoricalCrossentropy(from_logits=True),
                 metrics=[tf.keras.metrics.SparseCategoricalAccuracy()],
             )
-            for i in range(1,11):
+            for i in range(1,5):
                 for d in self.ds_train:
                     model.fit(d[1]['image'], d[1]['label'])
                 model.save_weights(CHECKPOINTS_PATH_FORMAT.format(i))
@@ -274,7 +274,7 @@ class TracIn:
                 plt.show()
 
 
-    def report_mislabel_detection(self, trackin_self_influence, num_dots=10):
+    def report_mislabel_detection(self, trackin_self_influence, biased_label, num_dots=10):
         self_influence_scores = trackin_self_influence['self_influences']
         indices = np.argsort(-self_influence_scores)
         mislabel_detection_report = {}
@@ -293,5 +293,6 @@ class TracIn:
                 # print(fraction_checked, detected_mislabels)
                 mislabel_detection_report[fraction_checked] = detected_mislabels
         mislabel_detection_report = {round(k,4):round(v/detected_mislabels,4) for k,v in mislabel_detection_report.items()}
+        plt.figure(None)
         plt.plot(list(mislabel_detection_report.keys()), list(mislabel_detection_report.values()))
-        plt.show()
+        plt.savefig(F'tracin_on_mnist_biased_towards_{biased_label}.png')
