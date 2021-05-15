@@ -19,7 +19,7 @@ def normalize(data):
         return {'label':data['label'], 'image': tf.cast(data['image'], tf.float32) / 255.}
     
 
-def make_get_dataset(split, batch_size, with_index=True, is_corrupt=True):
+def make_get_dataset(split, batch_size, with_index=True, is_corrupt=True, corrupt_ratio=.1):
     def get_dataset() -> tf.data.Dataset:
         builder = tfds.builder(name='mnist', data_dir=MNIST_TFDS_DIR)
         builder.download_and_prepare()
@@ -42,7 +42,7 @@ def make_get_dataset(split, batch_size, with_index=True, is_corrupt=True):
             assert split == 'train'
             np.random.seed(0)
             masks = np.zeros((60000,), int)
-            mask_indices = np.random.choice(range(60000), size=60000//10, replace=False)
+            mask_indices = np.random.choice(range(60000), size=60000*corrupt_ratio//1, replace=False)
             masks[mask_indices] = 1
             corrupt_indices = tf.convert_to_tensor(masks, tf.int64)
             ds = ds.map(lambda index, data: (index, corrupt(index, data, corrupt_indices)))
