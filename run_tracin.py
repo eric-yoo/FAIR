@@ -14,4 +14,4 @@ tracin = TracIn(ds_train, ds_test, \
     True)
 
 # tracin.find_and_show(tracin.trackin_test, 8, 'influence')
-tracin.show_self_influence(tracin.trackin_train_self_influences, topk=100)
+tracin.show_self_influence(tracin.trackin_train_self_influences, topk=10)

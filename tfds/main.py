@@ -5,15 +5,18 @@ import numpy as np
 import tensorflow as tf
 import tensorflow_datasets as tfds
 
-def corrupt(index, data, corrupt_indices):
+def corrupt(index, data, corrupt_indices, biased_label=2):
     if corrupt_indices[index] == 1:
-        return {'label':tf.constant(2, tf.int64), 'image': data['image'], 'corrupt': 1}
+        return {'correct_label':data['label'], 'label':tf.constant(biased_label, tf.int64), 'image': data['image'], 'corrupt': 1}
     else:
-        return {'label':data['label'], 'image': data['image'], 'corrupt': 0}
+        return {'correct_label':data['label'], 'label':data['label'], 'image': data['image'], 'corrupt': 0}
     
 
 def normalize(data):
-    return {'label':data['label'], 'image': tf.cast(data['image'], tf.float32) / 255.}
+    if 'correct_label' in data:
+        return {'correct_label':data['correct_label'], 'label':data['label'], 'image': tf.cast(data['image'], tf.float32) / 255.}
+    else:    
+        return {'label':data['label'], 'image': tf.cast(data['image'], tf.float32) / 255.}
     
 
 def make_get_dataset(split, batch_size, with_index=True, is_corrupt=True):
@@ -35,7 +38,6 @@ def make_get_dataset(split, batch_size, with_index=True, is_corrupt=True):
             indices =  tf.data.Dataset.from_tensor_slices(list(indices_range[split]))
             ds = tf.data.Dataset.zip((indices, ds))
 
-        ds = ds.map( lambda index, data: (index, normalize(data)))
         if is_corrupt:
             assert split == 'train'
             np.random.seed(0)
@@ -44,6 +46,8 @@ def make_get_dataset(split, batch_size, with_index=True, is_corrupt=True):
             masks[mask_indices] = 1
             corrupt_indices = tf.convert_to_tensor(masks, tf.int64)
             ds = ds.map(lambda index, data: (index, corrupt(index, data, corrupt_indices)))
+        
+        ds = ds.map( lambda index, data: (index, normalize(data)))
         # counts = [0]*10
         # for d in ds:
         #     counts[d[1]['label'].numpy()] +=1

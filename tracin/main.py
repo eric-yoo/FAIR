@@ -99,15 +99,17 @@ class TracIn:
         labels_np = []
         probs_np = []
         predicted_labels_np = []
+        correct_labels_np = []
         for d in ds:
-            images_replicas, imageids_replicas, self_influences_replica, labels_replica, probs_replica, predictied_labels_replica = self.strategy.run(self.run_self_influence, args=(d,))  
-            for images, imageids, self_influences, labels, probs, predicted_labels in zip(
+            images_replicas, imageids_replicas, self_influences_replica, labels_replica, probs_replica, predictied_labels_replica, correct_labels_replica = self.strategy.run(self.run_self_influence, args=(d,))  
+            for images, imageids, self_influences, labels, probs, predicted_labels, correct_labels in zip(
                 self.strategy.experimental_local_results(images_replicas), 
                 self.strategy.experimental_local_results(imageids_replicas), 
                 self.strategy.experimental_local_results(self_influences_replica), 
                 self.strategy.experimental_local_results(labels_replica), 
                 self.strategy.experimental_local_results(probs_replica), 
-                self.strategy.experimental_local_results(predictied_labels_replica)):
+                self.strategy.experimental_local_results(predictied_labels_replica),
+                self.strategy.experimental_local_results(correct_labels_replica)):
                 if imageids.shape[0] == 0:
                     continue
                 images_np.append(images.numpy())
@@ -116,12 +118,14 @@ class TracIn:
                 labels_np.append(labels.numpy())
                 probs_np.append(probs.numpy())
                 predicted_labels_np.append(predicted_labels.numpy()) 
+                correct_labels_np.append(correct_labels.numpy())
         return {'images': np.concatenate(images_np),
                 'image_ids': np.concatenate(image_ids_np),
                 'self_influences': np.concatenate(self_influences_np),
                 'labels': np.concatenate(labels_np),
                 'probs': np.concatenate(probs_np),
-                'predicted_labels': np.concatenate(predicted_labels_np)
+                'predicted_labels': np.concatenate(predicted_labels_np),
+                'correct_labels': np.concatenate(correct_labels_np)
                 }    
 
     @tf.function
@@ -129,6 +133,7 @@ class TracIn:
         imageids, data = inputs
         images = data['image']
         labels = data['label']
+        correct_labels = data['correct_label']
         self_influences = []
         for m in self.models:
             with tf.GradientTape(watch_accessed_variables=False) as tape:
@@ -143,7 +148,7 @@ class TracIn:
 
         # Using probs from last checkpoint
         probs, predicted_labels = tf.math.top_k(probs, k=1)
-        return images, imageids, tf.math.reduce_sum(tf.stack(self_influences, axis=-1), axis=-1), labels, probs, predicted_labels
+        return images, imageids, tf.math.reduce_sum(tf.stack(self_influences, axis=-1), axis=-1), labels, probs, predicted_labels, correct_labels
 
     @tf.function
     def run(self, inputs):
@@ -256,8 +261,9 @@ class TracIn:
         self_influence_scores = trackin_self_influence['self_influences']
         indices = np.argsort(-self_influence_scores)
         for i, index in enumerate(indices[:topk]):
-            print('example {} (index: {})'.format(i, index))
-            print('label: {}, prob: {}, predicted_label: {}'.format(
+            self.debug('example {} (index: {})'.format(i, index))
+            self.debug('correct_label: {}, label: {}, prob: {}, predicted_label: {}'.format(
+                trackin_self_influence['correct_labels'][index],
                 trackin_self_influence['labels'][index], 
                 trackin_self_influence['probs'][index][0], 
                 trackin_self_influence['predicted_labels'][index][0]))
