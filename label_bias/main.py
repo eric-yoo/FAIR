@@ -49,10 +49,8 @@ def run_simple_NN(X,
       model.fit(X, y)
       if i > n_epochs-3:
         model.save_weights(CHECKPOINTS_PATH_FORMAT.format(it, i))
-  training_prediction = model.evaluate(X,y)
-  testing_prediction = model.evaluate(X_test, y_test)
 
-  return training_prediction, testing_prediction
+  return eval_simple_NN(X,y,X_test,y_test,weights,it,n_epochs=n_epochs,verbose = False)
   
   #N = 512
   
@@ -132,12 +130,13 @@ def eval_simple_NN(X,
   n_features = X.shape[1]
   weights_ = weights / (1. * np.sum(weights))
   
-  model = network.model(num_classes=10, batch_size=BATCH_SIZE)
+  model = network.model(num_classes=10, batch_size=None)
   
   CHECKPOINTS_PATH_FORMAT = "simpleNN/lb{}_ckpt{}"
   for i in range(1, n_epochs+1):
     if i > n_epochs-3:
-      model.load_weights(CHECKPOINTS_PATH_FORMAT.format(it, i))
+      model.load_weights(CHECKPOINTS_PATH_FORMAT.format(it, i)).expect_partial()
+  print(CHECKPOINTS_PATH_FORMAT.format(it, i))
   model.compile(
       optimizer=tf.keras.optimizers.Adam(0.001),
       loss=tf.keras.losses.SparseCategoricalCrossentropy(from_logits=True),
