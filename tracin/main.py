@@ -296,3 +296,13 @@ class TracIn:
         plt.figure(None)
         plt.plot(list(mislabel_detection_report.keys()), list(mislabel_detection_report.values()))
         plt.savefig(F'tracin_on_mnist_biased_towards_{biased_label}.png')
+
+    def report_test_accuracy(self):
+        model = self.models[-1]
+        model.compile(
+            optimizer=tf.keras.optimizers.Adam(0.001),
+            loss=tf.keras.losses.SparseCategoricalCrossentropy(from_logits=True),
+            metrics=[tf.keras.metrics.SparseCategoricalAccuracy()],
+        )
+        ds_test_without_index = self.ds_test.map(lambda index, data:(data['image'], data['label']))
+        model.evaluate(ds_test_without_index)
