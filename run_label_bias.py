@@ -57,7 +57,7 @@ for it in range(1, n_iters+1):
     weights = debias_weights(train_ys_corrupted, protected_train, multipliers)
     weights = weights / np.sum(weights)
     print("Weights for 2", np.sum(weights[np.where(train_ys_corrupted==2)]))
-    train_prediction, test_predictions = run_simple_NN(train_xs, train_ys, test_xs, test_ys, weights, it)
+    train_prediction, test_predictions = run_simple_NN(train_xs, train_ys, test_xs, test_ys, weights, it, n_epochs=30)
     violation = np.mean(train_prediction == 2) - 0.1
     multipliers -= learning_rate * violation
 

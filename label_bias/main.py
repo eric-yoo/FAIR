@@ -27,6 +27,7 @@ def run_simple_NN(X,
                   y_test,
                   weights,
                   it,
+                  n_epochs=30,
                   verbose = False
                  ):
 
@@ -44,10 +45,10 @@ def run_simple_NN(X,
   print("Xshape{}, Yshape{}, Xtype{}, Ytype{}".format(X.shape, y.shape, type(X), type(y)))
 
   CHECKPOINTS_PATH_FORMAT = "simpleNN/lb{}_ckpt{}"
-  for i in range(1, 4):
+  for i in range(1, n_epochs+1):
       model.fit(X, y)
-      model.save_weights(CHECKPOINTS_PATH_FORMAT.format(it, i))
-
+      if i > n_epochs-3:
+        model.save_weights(CHECKPOINTS_PATH_FORMAT.format(it, i))
   training_prediction = model.evaluate(X,y)
   testing_prediction = model.evaluate(X_test, y_test)
 
@@ -115,3 +116,34 @@ def debias_weights(original_labels, protected_attributes, multipliers):
   weights = np.exp(exponents)/ (np.exp(exponents) + np.exp(-exponents))
   weights = np.where(original_labels == 2, 1 - weights, weights)
   return weights
+
+# neural network
+def eval_simple_NN(X,
+                  y,
+                  X_test,
+                  y_test,
+                  weights,
+                  it,
+                  n_epochs=30,
+                  verbose = False
+                 ):
+
+  n_labels = np.max(y) + 1
+  n_features = X.shape[1]
+  weights_ = weights / (1. * np.sum(weights))
+  
+  model = network.model(num_classes=10, batch_size=BATCH_SIZE)
+  
+  CHECKPOINTS_PATH_FORMAT = "simpleNN/lb{}_ckpt{}"
+  for i in range(1, n_epochs+1):
+    if i > n_epochs-3:
+      model.load_weights(CHECKPOINTS_PATH_FORMAT.format(it, i))
+  model.compile(
+      optimizer=tf.keras.optimizers.Adam(0.001),
+      loss=tf.keras.losses.SparseCategoricalCrossentropy(from_logits=True),
+      metrics=[tf.keras.metrics.SparseCategoricalAccuracy()],
+  )
+  training_prediction = model.evaluate(X,y)
+  testing_prediction = model.evaluate(X_test, y_test)
+
+  return training_prediction, testing_prediction
