@@ -1,4 +1,4 @@
-BATCH_SIZE = 128
+BATCH_SIZE = 64
 
 import numpy as np
 #import tensorflow.compat.v1 as tf
@@ -42,11 +42,16 @@ def run_simple_NN(X,
       metrics=[tf.keras.metrics.SparseCategoricalAccuracy()],
   )
 
-  print("Xshape{}, Yshape{}, Xtype{}, Ytype{}".format(X.shape, y.shape, type(X), type(y)))
+  #ns = np.random.choice(range(len(X)), size=len(X), replace=True, p=weights_)
+  ns = np.random.choice(range(len(X)), BATCH_SIZE*100, replace=True, p=weights_)
+
+  #print(X.shape, y.shape)
+  X_train = X[ns,:]
+  y_train = y[ns]
 
   CHECKPOINTS_PATH_FORMAT = "simpleNN/lb{}_ckpt{}"
   for i in range(1, n_epochs+1):
-      model.fit(X, y)
+      model.fit(X_train, y_train)
       if i > n_epochs-3:
         model.save_weights(CHECKPOINTS_PATH_FORMAT.format(it, i))
 
@@ -133,10 +138,9 @@ def eval_simple_NN(X,
   model = network.model(num_classes=10, batch_size=None)
   
   CHECKPOINTS_PATH_FORMAT = "simpleNN/lb{}_ckpt{}"
-  for i in range(1, n_epochs+1):
-    if i > n_epochs-3:
-      model.load_weights(CHECKPOINTS_PATH_FORMAT.format(it, i)).expect_partial()
-  print(CHECKPOINTS_PATH_FORMAT.format(it, i))
+  model.load_weights(CHECKPOINTS_PATH_FORMAT.format(it, n_epochs)).expect_partial()
+
+  print(CHECKPOINTS_PATH_FORMAT.format(it, n_epochs-1))
   model.compile(
       optimizer=tf.keras.optimizers.Adam(0.001),
       loss=tf.keras.losses.SparseCategoricalCrossentropy(from_logits=True),
