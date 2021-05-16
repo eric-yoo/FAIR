@@ -37,5 +37,7 @@ pip install -r requirements
 - [X] add preprocessing in tracin data
 - [X] implement tracin self-influence
 - [X] experiment tracin with biased mnist
+- [X] fix label_bias bug (incorrect eval accuracy)
+- [ ] fix label_bias bug (rebalance weight not applied)
 - [ ] experiment label_bias -> tracin with biased mnist
 - [ ] integrate label_bias and tracin (naive, violation_tracin)

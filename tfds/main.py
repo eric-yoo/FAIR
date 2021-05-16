@@ -48,10 +48,10 @@ def make_mnist_dataset(split, batch_size, with_index=True, is_corrupt=True, corr
             ds = ds.map(lambda index, data: (index, corrupt(index, data, corrupt_indices, biased_label=biased_label)))
         
         ds = ds.map( lambda index, data: (index, normalize(data)))
-        # counts = [0]*10
-        # for d in ds:
-        #     counts[d[1]['label'].numpy()] +=1
-        # print(counts)
+        counts = [0]*10
+        for d in ds:
+            counts[d[1]['label'].numpy()] +=1
+        print(counts)
 
         ds = ds.batch(batch_size)
         ds = ds.prefetch(tf.data.experimental.AUTOTUNE)

@@ -40,7 +40,7 @@ class TracIn:
 
         for ckpt in [ckpt1, ckpt2, ckpt3]:
             model = network.model()
-            model.load_weights(ckpt).expect_partial()
+            model.load_weights(ckpt).expect_partial().expect_partial()
             self.models_penultimate.append(tf.keras.Model(model.layers[0].input, model.layers[-3].output))
             self.models_last.append(model.layers[-2])
             self.models.append(model)
