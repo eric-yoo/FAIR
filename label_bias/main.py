@@ -42,12 +42,15 @@ def run_simple_NN(X,
       metrics=[tf.keras.metrics.SparseCategoricalAccuracy()],
   )
 
-  #ns = np.random.choice(range(len(X)), size=len(X), replace=True, p=weights_)
-  ns = np.random.choice(range(len(X)), BATCH_SIZE*100, replace=True, p=weights_)
+  #ns = np.random.choice(range(len(X)), BATCH_SIZE*100, replace=True, p=weights_)
+  ns = np.random.choice(range(len(X)), BATCH_SIZE*100, replace=True)
 
-  #print(X.shape, y.shape)
+
   X_train = X[ns,:]
   y_train = y[ns]
+
+  #(6400,28,28) / (6400,)
+  #print(X_train.shape, y_train.shape)
 
   CHECKPOINTS_PATH_FORMAT = "simpleNN/lb{}_ckpt{}"
   for i in range(1, n_epochs+1):
@@ -57,61 +60,6 @@ def run_simple_NN(X,
 
   return eval_simple_NN(X,y,X_test,y_test,weights,it,n_epochs=n_epochs,verbose = False)
   
-  #N = 512
-  
-  #W_1 = weight_variable([784, N])
-  #b_1 = bias_variable([N])
-
-  #h_1 = tf.nn.relu(tf.matmul(x, W_1) + b_1)
-
-  #W_2 = weight_variable([N, N])
-  #b_2 = bias_variable([N])
-
-  #h_2 = tf.nn.relu(tf.matmul(h_1, W_2) + b_2)
-
-  #W_3 = weight_variable([N, N])
-  #b_3 = bias_variable([N])
-
-  #h_3 = tf.nn.relu(tf.matmul(h_2, W_3) + b_3)
-
-  #W_4 = weight_variable([N, 10])
-  #b_4 = bias_variable([10])
-
-  #NN_logits =tf.nn.softmax(tf.matmul(h_3, W_4) + b_4)
-
-  #loss = -tf.reduce_mean(tf.reduce_sum(y_ *tf.log(NN_logits+1e-6),1),0)
-  #acc = tf.reduce_mean(
-  #    tf.cast(tf.equal(tf.arg_max(NN_logits,1), tf.arg_max(y_,1)), "float"))
-  #train_step = tf.train.AdamOptimizer().minimize(loss)
-  #correct_prediction = tf.equal(tf.argmax(NN_logits, 1), tf.argmax(y_, 1))
-  #accuracy = tf.reduce_mean(tf.cast(correct_prediction, tf.float32))
-
-  #def one_hot(ns):
-  #  return np.eye(n_labels)[ns]
-
-  #y_onehot = one_hot(y)
-  #y_test_onehot = one_hot(y_test)
-
-  #with tf.Session() as sess:
-  #  print('\n[start training]\n')
-  #  sess.run(tf.global_variables_initializer())
-  #  for i in range(num_iter):
-  #    ns = np.random.choice(range(len(X)), size=50, replace=True, p=weights_)
-  #    if (i + 1) % display_steps == 0:
-  #      train_accuracy = accuracy.eval(feed_dict={x: X, y_: y_onehot})
-  #      test_accuracy = accuracy.eval(feed_dict={x: X_test, y_: y_test_onehot})
-
-  #      if verbose:
-  #          print("step %d, training accuracy %g, test accuracy %g" %
-  #            (i + 1, train_accuracy, test_accuracy))
-  #    train_step.run(
-  #        feed_dict={x: X[ns, :], y_: y_onehot[ns, :]})
-
-  #  testing_prediction = tf.argmax(NN_logits, 1).eval(feed_dict={x: X_test})
-  #  training_prediction = tf.argmax(NN_logits, 1).eval(feed_dict={x: X})
-  #  return training_prediction, testing_prediction
-
-
 def debias_weights(original_labels, protected_attributes, multipliers):
   exponents = np.zeros(len(original_labels))
   for i, m in enumerate(multipliers):
@@ -140,13 +88,16 @@ def eval_simple_NN(X,
   CHECKPOINTS_PATH_FORMAT = "simpleNN/lb{}_ckpt{}"
   model.load_weights(CHECKPOINTS_PATH_FORMAT.format(it, n_epochs)).expect_partial()
 
-  print(CHECKPOINTS_PATH_FORMAT.format(it, n_epochs-1))
   model.compile(
       optimizer=tf.keras.optimizers.Adam(0.001),
       loss=tf.keras.losses.SparseCategoricalCrossentropy(from_logits=True),
       metrics=[tf.keras.metrics.SparseCategoricalAccuracy()],
   )
-  training_prediction = model.evaluate(X,y)
-  testing_prediction = model.evaluate(X_test, y_test)
+
+  training_acc = model.evaluate(X,y)
+  testing_acc  = model.evaluate(X_test, y_test)
+
+  training_prediction = tf.argmax(model.predict(X), axis=1)
+  testing_prediction  = tf.argmax(model.predict(X_test), axis=1)
 
   return training_prediction, testing_prediction

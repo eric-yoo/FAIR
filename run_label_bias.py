@@ -21,13 +21,13 @@ np.random.seed(12345)
 idxs = np.random.choice(range(len(train_ys_corrupted)), size=len(train_ys_corrupted)//5, replace=False)
 train_ys_corrupted[idxs] = 2
 
-# print("Distribution Before")
-# for i in range(10):
-#   print (np.mean(train_ys == i))
+print("Distribution Before")
+for i in range(10):
+  print (np.mean(train_ys == i))
 
-# print("Distribution After")
-# for i in range(10):
-#   print (np.mean(train_ys_corrupted == i))
+print("Distribution After")
+for i in range(10):
+  print (np.mean(train_ys_corrupted == i))
 
 '''
 [TRAIN]
@@ -39,27 +39,34 @@ test_xs, test_ys
 '''
 
 ### unbiased mnist training
+print("=============== unconstrained example ===============")
 weights = np.array([1] * len(train_ys))
-# test_predictions = run_simple_NN(train_xs, train_ys, test_xs, test_ys, weights)
+test_predictions = run_simple_NN(train_xs, train_ys, test_xs, test_ys, weights)
 
 
 ### biased mnist training (unconstrained baseline)
+print("=============== constrained example ===============")
 weights = np.array([1] * len(train_ys))
-# test_predictions = run_simple_NN(train_xs, train_ys_corrupted, test_xs, test_ys, weights)
+test_predictions = run_simple_NN(train_xs, train_ys_corrupted, test_xs, test_ys, weights)
 
 multipliers = np.zeros(1)
 learning_rate = 1.
 n_iters = 100
 protected_train = [(train_ys_corrupted == 2)]
 
+print("=============== Begin label bias training ===============")
 for it in range(1, n_iters+1):
     print("Iteration", it + 1, "multiplier", multipliers)
     weights = debias_weights(train_ys_corrupted, protected_train, multipliers)
     weights = weights / np.sum(weights)
-    print("Weights for 2", np.sum(weights[np.where(train_ys_corrupted==2)]))
+    print("Weights for 2 {}, where weight shape is {}".format(np.sum(weights[np.where(train_ys_corrupted==2)]), np.array(weights).shape))
+
+    # training on corrupted dataset, testing on correct dataset
     train_prediction, test_predictions = run_simple_NN(train_xs, train_ys, test_xs, test_ys, weights, it, n_epochs=5)
+
     violation = np.mean(train_prediction == 2) - 0.1
     multipliers -= learning_rate * violation
+    print("violation: {}".format(violation))
 
     ### get Tracin multiplier ###
     #multiplier_TI = TracIn(train_xs, train_ys_corrupted).self_influence_tester()
