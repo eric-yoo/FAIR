@@ -47,30 +47,35 @@ print("=============== pure MNIST training ===============")
 weights = None
 train_predictions, test_predictions = run_simple_NN(train_xs, train_ys, test_xs, test_ys, weights, n_epochs=5, mode="unbiased")
 
+print()
 
 ### biased mnist training (unconstrained baseline)
 print("=============== biased MNIST unconstrained training ===============")
 weights = None
-train_predictions, test_predictions = run_simple_NN(train_xs, train_ys, test_xs, test_ys, weights, n_epochs=5, mode="biased")
+train_predictions, test_predictions = run_simple_NN(train_xs, train_ys_corrupted, test_xs, test_ys, weights, n_epochs=5, mode="biased")
+
+print()
 
 ### Label bias
 print("=============== biased MNIST label bias training ===============")
 
 multipliers = np.zeros(1)
-learning_rate = .001
+label_bias_lr = 1.0
 n_iters = 100
 protected_train = [(train_ys_corrupted == 2)]
 
 for it in range(1, n_iters+1):
-    print("Iteration", it + 1, "multiplier", multipliers)
+    print("Iteration", it, "multiplier", multipliers)
     weights = debias_weights(train_ys_corrupted, protected_train, multipliers)
     weights = weights / np.sum(weights)
+
+    print("Weights for 2 : {}".format(np.sum(weights[np.where(train_ys_corrupted==2)])))
 
     # training on corrupted dataset, testing on correct dataset
     train_prediction, test_predictions = run_simple_NN(train_xs, train_ys_corrupted, test_xs, test_ys, weights, it, n_epochs=5, mode="lb")
 
     violation = np.mean(train_prediction == 2) - 0.1
-    multipliers -= learning_rate * violation
+    multipliers -= label_bias_lr * violation
     print("violation: {}".format(violation))
 
     ### get Tracin multiplier ###

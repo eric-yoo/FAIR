@@ -43,11 +43,15 @@ def run_simple_NN(X,
 
   # weights for data choice
   if weights is None :
-      X_train = X
-      y_train = y
+      ns = np.random.choice(range(len(X)), len(X), replace=True)
+      X_train = X[ns,:]
+      y_train = y[ns]
+      #X_train = X
+      #y_train = y
+
   else :
       weights_ = weights / (1. * np.sum(weights))
-      ns = np.random.choice(range(len(X)), BATCH_SIZE*100, replace=True, p=weights)
+      ns = np.random.choice(range(len(X)), len(X), replace=True, p=weights)
       X_train = X[ns,:]
       y_train = y[ns]
 
@@ -92,7 +96,9 @@ def eval_simple_NN(X,
 
   return training_prediction, testing_prediction
 
+
 def debias_weights(original_labels, protected_attributes, multipliers):
+
   exponents = np.zeros(len(original_labels))
   for i, m in enumerate(multipliers):
     exponents -= m * protected_attributes[i]
