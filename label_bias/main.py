@@ -1,4 +1,5 @@
 BATCH_SIZE = 64
+CHECKPOINTS_PATH_FORMAT = "simpleNN/checkpoints/lb{}_ckpt{}"
 
 import numpy as np
 #import tensorflow.compat.v1 as tf
@@ -26,15 +27,15 @@ def run_simple_NN(X,
                   X_test,
                   y_test,
                   weights,
-                  it,
+                  it=0,
                   n_epochs=30,
                   verbose = False
                  ):
 
-  n_labels = np.max(y) + 1
-  n_features = X.shape[1]
   weights_ = weights / (1. * np.sum(weights))
   
+
+  # train model
   model = network.model(num_classes=10, batch_size=BATCH_SIZE)
   model.compile(
       optimizer=tf.keras.optimizers.Adam(0.001),
@@ -42,17 +43,17 @@ def run_simple_NN(X,
       metrics=[tf.keras.metrics.SparseCategoricalAccuracy()],
   )
 
-  #ns = np.random.choice(range(len(X)), BATCH_SIZE*100, replace=True, p=weights_)
   ns = np.random.choice(range(len(X)), BATCH_SIZE*100, replace=True)
 
 
-  X_train = X[ns,:]
-  y_train = y[ns]
+  #X_train = X[ns,:]
+  #y_train = y[ns]
+  X_train = X
+  y_train = y
 
   #(6400,28,28) / (6400,)
   #print(X_train.shape, y_train.shape)
 
-  CHECKPOINTS_PATH_FORMAT = "simpleNN/lb{}_ckpt{}"
   for i in range(1, n_epochs+1):
       model.fit(X_train, y_train)
       if i > n_epochs-3:
@@ -74,18 +75,12 @@ def eval_simple_NN(X,
                   X_test,
                   y_test,
                   weights,
-                  it,
+                  it=0,
                   n_epochs=30,
                   verbose = False
                  ):
 
-  n_labels = np.max(y) + 1
-  n_features = X.shape[1]
-  weights_ = weights / (1. * np.sum(weights))
-  
   model = network.model(num_classes=10, batch_size=None)
-  
-  CHECKPOINTS_PATH_FORMAT = "simpleNN/lb{}_ckpt{}"
   model.load_weights(CHECKPOINTS_PATH_FORMAT.format(it, n_epochs)).expect_partial()
 
   model.compile(
@@ -94,8 +89,10 @@ def eval_simple_NN(X,
       metrics=[tf.keras.metrics.SparseCategoricalAccuracy()],
   )
 
-  training_acc = model.evaluate(X,y)
-  testing_acc  = model.evaluate(X_test, y_test)
+  training_loss, training_acc = model.evaluate(X,y)
+  testing_loss,  testing_acc  = model.evaluate(X_test, y_test)
+
+  print("train {}% / test acc {}%".format(training_acc, testing_acc))
 
   training_prediction = tf.argmax(model.predict(X), axis=1)
   testing_prediction  = tf.argmax(model.predict(X_test), axis=1)

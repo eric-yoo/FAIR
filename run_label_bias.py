@@ -25,6 +25,8 @@ print("Distribution Before")
 for i in range(10):
   print (np.mean(train_ys == i))
 
+print()
+
 print("Distribution After")
 for i in range(10):
   print (np.mean(train_ys_corrupted == i))
@@ -50,7 +52,7 @@ weights = np.array([1] * len(train_ys))
 test_predictions = run_simple_NN(train_xs, train_ys_corrupted, test_xs, test_ys, weights)
 
 multipliers = np.zeros(1)
-learning_rate = 1.
+learning_rate = .001
 n_iters = 100
 protected_train = [(train_ys_corrupted == 2)]
 
@@ -71,6 +73,5 @@ for it in range(1, n_iters+1):
     ### get Tracin multiplier ###
     #multiplier_TI = TracIn(train_xs, train_ys_corrupted).self_influence_tester()
     
-
     print()
     print()
