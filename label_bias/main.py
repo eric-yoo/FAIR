@@ -1,5 +1,5 @@
 BATCH_SIZE = 64
-CHECKPOINTS_PATH_FORMAT = "simpleNN/checkpoints/lb{}_ckpt{}"
+CHECKPOINTS_PATH_FORMAT = "simpleNN/checkpoints/{}_iter{}_ckpt{}"
 
 import numpy as np
 #import tensorflow.compat.v1 as tf
@@ -28,12 +28,10 @@ def run_simple_NN(X,
                   y_test,
                   weights,
                   it=0,
-                  n_epochs=30,
-                  verbose = False
+                  n_epochs=10,
+                  # unbiased / biased / lb
+                  mode = "unbiased"
                  ):
-
-  weights_ = weights / (1. * np.sum(weights))
-  
 
   # train model
   model = network.model(num_classes=10, batch_size=BATCH_SIZE)
@@ -43,13 +41,15 @@ def run_simple_NN(X,
       metrics=[tf.keras.metrics.SparseCategoricalAccuracy()],
   )
 
-  ns = np.random.choice(range(len(X)), BATCH_SIZE*100, replace=True)
-
-
-  #X_train = X[ns,:]
-  #y_train = y[ns]
-  X_train = X
-  y_train = y
+  # weights for data choice
+  if weights is None :
+      X_train = X
+      y_train = y
+  else :
+      weights_ = weights / (1. * np.sum(weights))
+      ns = np.random.choice(range(len(X)), BATCH_SIZE*100, replace=True, p=weights)
+      X_train = X[ns,:]
+      y_train = y[ns]
 
   #(6400,28,28) / (6400,)
   #print(X_train.shape, y_train.shape)
@@ -57,18 +57,10 @@ def run_simple_NN(X,
   for i in range(1, n_epochs+1):
       model.fit(X_train, y_train)
       if i > n_epochs-3:
-        model.save_weights(CHECKPOINTS_PATH_FORMAT.format(it, i))
+        model.save_weights(CHECKPOINTS_PATH_FORMAT.format(mode, it, i))
 
-  return eval_simple_NN(X,y,X_test,y_test,weights,it,n_epochs=n_epochs,verbose = False)
+  return eval_simple_NN(X,y,X_test,y_test,weights,it,n_epochs=n_epochs,mode=mode)
   
-def debias_weights(original_labels, protected_attributes, multipliers):
-  exponents = np.zeros(len(original_labels))
-  for i, m in enumerate(multipliers):
-    exponents -= m * protected_attributes[i]
-  weights = np.exp(exponents)/ (np.exp(exponents) + np.exp(-exponents))
-  weights = np.where(original_labels == 2, 1 - weights, weights)
-  return weights
-
 # neural network
 def eval_simple_NN(X,
                   y,
@@ -76,12 +68,13 @@ def eval_simple_NN(X,
                   y_test,
                   weights,
                   it=0,
-                  n_epochs=30,
-                  verbose = False
+                  n_epochs=10,
+                  # unbiased / biased / lb
+                  mode = "unbiased"
                  ):
 
   model = network.model(num_classes=10, batch_size=None)
-  model.load_weights(CHECKPOINTS_PATH_FORMAT.format(it, n_epochs)).expect_partial()
+  model.load_weights(CHECKPOINTS_PATH_FORMAT.format(mode, it, n_epochs)).expect_partial()
 
   model.compile(
       optimizer=tf.keras.optimizers.Adam(0.001),
@@ -98,3 +91,12 @@ def eval_simple_NN(X,
   testing_prediction  = tf.argmax(model.predict(X_test), axis=1)
 
   return training_prediction, testing_prediction
+
+def debias_weights(original_labels, protected_attributes, multipliers):
+  exponents = np.zeros(len(original_labels))
+  for i, m in enumerate(multipliers):
+    exponents -= m * protected_attributes[i]
+  weights = np.exp(exponents)/ (np.exp(exponents) + np.exp(-exponents))
+  weights = np.where(original_labels == 2, 1 - weights, weights)
+  return weights
+
