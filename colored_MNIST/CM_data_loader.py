@@ -6,9 +6,6 @@ class CM_data_loader():
     
     def __init__(self):
 
-        url = "https://drive.google.com/file/d/11K-GmFD5cg3_KTtyBRkj9VBEnHl-hx_Q/view?usp=sharing"
-        wget.download(url)
-
         dat = np.load("colored_mnist.npy", allow_pickle=True, encoding="latin1").item()
 
         self.train_image = dat['train_image']
