@@ -1,4 +1,4 @@
-CHECKPOINTS_PATH_FORMAT = "simpleNN/ckpt{}" 
+CHECKPOINTS_PATH_FORMAT = "simpleNN/checkpoints/ckpt{}" 
 
 import matplotlib.pyplot as plt
 import numpy as np
@@ -260,19 +260,41 @@ class TracIn:
     def show_self_influence(self, trackin_self_influence, topk=50):
         self_influence_scores = trackin_self_influence['self_influences']
         indices = np.argsort(-self_influence_scores)
-        for i, index in enumerate(indices[:topk]):
-            self.debug('example {} (index: {})'.format(i, index))
-            self.debug('correct_label: {}, label: {}, prob: {}, predicted_label: {}'.format(
-                trackin_self_influence['correct_labels'][index],
-                trackin_self_influence['labels'][index], 
-                trackin_self_influence['probs'][index][0], 
-                trackin_self_influence['predicted_labels'][index][0]))
-            # img = get_image(trackin_self_influence['image_ids'][index])
-            img = self.trackin_train_self_influences['images'][index].reshape((28,28))
-            if img is not None:
-                plt.imshow(img, interpolation='nearest')
-                plt.show()
+        sorted_scores = np.sort(-self_influence_scores)
 
+        import pandas as pd
+
+        df = pd.DataFrame(self_influence_scores, columns=['value'])
+        df.hist()
+
+        plt.show()
+
+        #for i, index in enumerate(indices[:topk]):
+            #self.debug('example {} (index: {})'.format(i, index))
+            #self.debug('correct_label: {}, label: {}, prob: {}, predicted_label: {}'.format(
+            #    trackin_self_influence['correct_labels'][index],
+            #    trackin_self_influence['labels'][index], 
+            #    trackin_self_influence['probs'][index][0], 
+            #    trackin_self_influence['predicted_labels'][index][0]))
+            # img = get_image(trackin_self_influence['image_ids'][index])
+            #img = self.trackin_train_self_influences['images'][index].reshape((28,28))
+            #if img is not None:
+            #    plt.imshow(img, interpolation='nearest')
+            #    plt.show()
+
+    def self_influence_tester(self, trackin_self_influence, violation=.1):
+        self_influence_scores = trackin_self_influence['self_influences']
+        indices = np.argsort(-self_influence_scores)
+        sorted_scores = np.sort(-self_influence_scores)
+        length = len(trackin_self_influence['labels'])
+        selected_indices = indices[:int(violation*length)]
+        
+        dat = np.zeros(length, int)
+        dat[selected_indices] = 1
+
+        print(len(selected_indices))
+
+        return dat
 
     def report_mislabel_detection(self, trackin_self_influence, biased_label, num_dots=10):
         self_influence_scores = trackin_self_influence['self_influences']

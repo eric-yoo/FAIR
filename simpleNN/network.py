@@ -12,6 +12,7 @@ def model(num_classes=10, batch_size = None):
   x = tf.keras.layers.Dense(512, activation='relu')(x)
   x = tf.keras.layers.Dense(512, activation='relu')(x)
   #x = tf.keras.layers.Dense(512, activation='relu')(x)
+
   x = tf.keras.layers.Dense(10)(x)
   x = tf.keras.layers.Softmax()(x)
   

@@ -106,3 +106,10 @@ def debias_weights(original_labels, protected_attributes, multipliers):
   weights = np.where(original_labels == 2, 1 - weights, weights)
   return weights
 
+def debias_weights_TI(original_labels, multipliers_TI):
+
+  exponents = -multipliers_TI
+  weights = np.exp(exponents)/ (np.exp(exponents) + np.exp(-exponents))
+  weights = np.where(original_labels == 2, 1 - weights, weights)
+  return weights
+

@@ -1,4 +1,4 @@
-CHECKPOINTS_PATH_FORMAT = "simpleNN/ckpt{}" 
+CHECKPOINTS_PATH_FORMAT = "simpleNN/checkpoints/lb_iter99_ckpt{}" 
 BATCH_SIZE = 512
 
 from tfds.main import make_mnist_dataset
@@ -12,10 +12,11 @@ if True:
 
     # arguments: ds_train, ds_test, ckpt1 
     tracin = TracIn(ds_train, ds_test, \
-        CHECKPOINTS_PATH_FORMAT.format(2), CHECKPOINTS_PATH_FORMAT.format(3), CHECKPOINTS_PATH_FORMAT.format(4), \
-        # '','','',
+        CHECKPOINTS_PATH_FORMAT.format(3), CHECKPOINTS_PATH_FORMAT.format(4), CHECKPOINTS_PATH_FORMAT.format(5), \
+         #'','','',
         True)
 
     # tracin.find_and_show(tracin.trackin_test, 8, 'influence')
     # tracin.report_mislabel_detection(tracin.trackin_train_self_influences, biased_label=biased_label, num_dots=10)
-    tracin.report_test_accuracy()
+    tracin.self_influence_tester(tracin.trackin_train_self_influences)
+    #$tracin.report_test_accuracy()
