@@ -73,7 +73,7 @@ for it in range(1, n_iters+1):
 
     # training on corrupted dataset, testing on correct dataset
     train_prediction, test_predictions = run_simple_NN(train_xs, train_ys_corrupted, test_xs, test_ys, weights, it, n_epochs=5, mode="lb")
-
+    
     violation = np.mean(train_prediction == 2) - 0.1
     multipliers -= label_bias_lr * violation
     print("violation: {}".format(violation))

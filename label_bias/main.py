@@ -58,12 +58,21 @@ def run_simple_NN(X,
   #(6400,28,28) / (6400,)
   #print(X_train.shape, y_train.shape)
 
+  training_accs = []
+  testing_accs  = []
+
   for i in range(1, n_epochs+1):
       model.fit(X_train, y_train)
+      training_acc, testing_acc = eval_simple_NN(X_train, y, X_test, y_test, weights, it, n_epochs=n_epochs, mode=mode)
+      e
+
+      training_accs.append(training_acc)
+      testing_accs.append(testing_acc)
+
       if i > n_epochs-3:
         model.save_weights(CHECKPOINTS_PATH_FORMAT.format(mode, it, i))
 
-  return eval_simple_NN(X,y,X_test,y_test,weights,it,n_epochs=n_epochs,mode=mode)
+  return 
   
 # neural network
 def eval_simple_NN(X,
