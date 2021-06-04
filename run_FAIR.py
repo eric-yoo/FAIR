@@ -3,6 +3,13 @@ import copy
 from tensorflow.keras.datasets import mnist
 from label_bias.main import *
 from tracin.main import TracIn
+import argparse
+
+parser = argparse.ArgumentParser(description='Process some integers.')
+parser.add_argument('--dataset', type=str, default='mnist')
+
+args = parser.parse_args()
+print(F'dataset: {args.dataset}')
 
 ### load mnist
 (train_xs, train_ys), (test_xs, test_ys) = mnist.load_data()
@@ -83,7 +90,7 @@ for it in range(1, n_iters+1):
 
 
     #TRACIN
-    from tfds.main import make_mnist_dataset
+    from tfds.main import make_mnist_dataset, make_femnist_dataset
     from tracin.main import TracIn
 
     CHECKPOINTS_PATH_FORMAT2 = "simpleNN/checkpoints/lb_iter{}_ckpt{}"
