@@ -1,8 +1,8 @@
-CHECKPOINTS_PATH_FORMAT = "simpleNN/checkpoints/ckpt{}" 
-
 import matplotlib.pyplot as plt
 import numpy as np
 import tensorflow as tf
+import pandas as pd
+from config import args, TRACIN_PATH
 
 from simpleNN import network
 
@@ -20,7 +20,7 @@ class TracIn:
         if '' in [ckpt1, ckpt2, ckpt3]:
             # raise NotImplementedError
             self.debug('need train.')
-            model = network.model()
+            model = network.model(num_classes=10, batch_size=args.batch_size)
             model.compile(
                 optimizer=tf.keras.optimizers.Adam(0.001),
                 loss=tf.keras.losses.SparseCategoricalCrossentropy(from_logits=True),
@@ -262,8 +262,6 @@ class TracIn:
         indices = np.argsort(-self_influence_scores)
         sorted_scores = np.sort(-self_influence_scores)
 
-        import pandas as pd
-
         df = pd.DataFrame(self_influence_scores, columns=['value'])
         df.hist()
 
@@ -292,7 +290,7 @@ class TracIn:
         dat = np.zeros(length, int)
         dat[selected_indices] = 1
 
-        print(len(selected_indices))
+        # print(len(selected_indices))
 
         return dat
 

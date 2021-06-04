@@ -1,110 +1,71 @@
+from utils import magic_parser
 import numpy as np
-import copy
 from tensorflow.keras.datasets import mnist
 from label_bias.main import *
 from tracin.main import TracIn
-import argparse
+from tfds.main import make_mnist_dataset, make_femnist_dataset
+from config import args, FAIR_PATH_FORMAT
 
-parser = argparse.ArgumentParser(description='Process some integers.')
-parser.add_argument('--dataset', type=str, default='mnist')
+if args.dataset == 'mnist':
+  ds_train = make_mnist_dataset('train', args.batch_size, True, is_corrupt=True, corrupt_ratio=args.corrupt_ratio, biased_label=args.biased_label)
+  ds_test = make_mnist_dataset('test', args.batch_size, True, is_corrupt=False)
+elif args.dataset == 'femnist':
+  ds_train = make_femnist_dataset('train', args.batch_size, True, is_corrupt=True, corrupt_ratio=args.corrupt_ratio, biased_label=args.biased_label)
+  ds_test = make_femnist_dataset('test', args.batch_size, True, is_corrupt=False)
+else:
+  raise NotImplementedError
 
-args = parser.parse_args()
-print(F'dataset: {args.dataset}')
+### load dataset
+(train_xs, train_ys) = magic_parser(ds_train)
+(test_xs, test_ys) = magic_parser(ds_test)
 
-### load mnist
-(train_xs, train_ys), (test_xs, test_ys) = mnist.load_data()
-train_xs = train_xs.astype("float32") / 255.
-test_xs = test_xs.astype("float32") / 255.
 
-train_ys = train_ys.astype("float32")
-test_ys = test_ys.astype("float32")
-
-#train_xs = train_xs.reshape(-1, 28 * 28)
-#test_xs = test_xs.reshape(-1, 28 * 28)
-
-### create biased mnist
-train_ys_corrupted = np.copy(train_ys)
-np.random.seed(12345)
-idxs = np.random.choice(range(len(train_ys_corrupted)), size=len(train_ys_corrupted)//5, replace=False)
-train_ys_corrupted[idxs] = 2
-
-print("Distribution Before")
-for i in range(10):
-  print (np.mean(train_ys == i))
-
-print()
-
-print("Distribution After")
-for i in range(10):
-  print (np.mean(train_ys_corrupted == i))
-
-print()
-
-'''
-[TRAIN]
-train_xs, train_ys
-train_xs, train_ys_corrupted
-
-[TEST]
-test_xs, test_ys
-'''
-
-### unbiased mnist training
-#print("=============== pure MNIST training ===============")
-#weights = None
-#train_predictions, test_predictions = run_simple_NN(train_xs, train_ys, test_xs, test_ys, weights, n_epochs=5, mode="unbiased")
-#
-#print()
-#
-#### biased mnist training (unconstrained baseline)
-#print("=============== biased MNIST unconstrained training ===============")
-#weights = None
-#train_predictions, test_predictions = run_simple_NN(train_xs, train_ys_corrupted, test_xs, test_ys, weights, n_epochs=5, mode="biased")
-#
-#print()
-#
 ### Label bias
 print("=============== biased MNIST label bias training ===============")
 
 multipliers_TI = np.zeros(train_xs.shape[0])
 label_bias_lr = 1.0
 n_iters = 100
-#protected_train = [(train_ys_corrupted == 2)]
+protected_train = [(train_ys == 2)]
+
+#TRACIN
+# accuracy on {train,test} data over iterations
+train_results = [] 
+test_results  = []
 
 for it in range(1, n_iters+1):
     print("Iteration", it, "multiplier", multipliers_TI)
-    weights = debias_weights_TI(train_ys_corrupted, multipliers_TI)
+    weights = debias_weights_TI(train_ys, protected_train, multipliers_TI)
     weights = weights / np.sum(weights)
 
-    print("Weights for 2 : {}".format(np.sum(weights[np.where(train_ys_corrupted==2)])))
+    print("Weights for 2 : {}".format(np.sum(weights[np.where(train_ys==2)])))
 
     # training on corrupted dataset, testing on correct dataset
-    train_prediction, test_predictions = run_simple_NN(train_xs, train_ys_corrupted, test_xs, test_ys, weights, it, n_epochs=5, mode="lb")
+    train_res, test_res = run_simple_NN(train_xs, train_ys, test_xs, test_ys, weights, it=it, n_epochs=5, mode="fair")
 
-    violation = np.mean(train_prediction == 2) - 0.1
-    #multipliers -= label_bias_lr * violation
-    #print("violation: {}".format(violation))
+    train_results.append(train_res)
+    test_results.append(test_res)
 
-    ### get Tracin multiplier ###
-    # arguments: ds_train, ds_test, ckpt1 
+    if test_res[0] > 0.97 and train_res[0] > 0.97 :
+        print("EARLY EXIT @ iteration {} : Target accuracy achieved {}".format(it, test_res[0]))
+        break
+    
+    # each res consists of (acc,predictions)
+    train_pred = train_res[1]
+    
+    violation = np.mean(train_pred == 2) - 0.1
+    print("violation: {}".format(violation))
 
-
-    #TRACIN
-    from tfds.main import make_mnist_dataset, make_femnist_dataset
-    from tracin.main import TracIn
-
-    CHECKPOINTS_PATH_FORMAT2 = "simpleNN/checkpoints/lb_iter{}_ckpt{}"
-
-    biased_label = 2
-    ds_train = make_mnist_dataset('train', BATCH_SIZE, True, is_corrupt=True, biased_label=biased_label)
-    ds_test = make_mnist_dataset('test', BATCH_SIZE, True, is_corrupt=False)
+    # instantiate TRACIN
     tracin = TracIn(ds_train, ds_test, \
-        CHECKPOINTS_PATH_FORMAT2.format(it, 3), CHECKPOINTS_PATH_FORMAT2.format(it, 4), CHECKPOINTS_PATH_FORMAT2.format(it,5), \
+        FAIR_PATH_FORMAT.format(it, 3), FAIR_PATH_FORMAT.format(it, 4), FAIR_PATH_FORMAT.format(it,5), \
         True)
 
-    #tracin.self_influence_tester(tracin.trackin_train_self_influences)
-
+    # multipliers -= label_bias_lr * violation
     multiplier_TI = tracin.self_influence_tester(tracin.trackin_train_self_influences,violation)
-    
+
     print()
     print()
+
+# acc data over iterations for plot
+test_res_it = [res[1] for res in test_results]

@@ -1,6 +1,4 @@
-BATCH_SIZE = 64
-CHECKPOINTS_PATH_FORMAT = "simpleNN/checkpoints/{}_iter{}_ckpt{}"
-
+from config import args, CHECKPOINTS_PATH_FORMAT
 import numpy as np
 #import tensorflow.compat.v1 as tf
 #tf.disable_v2_behavior()
@@ -34,7 +32,7 @@ def run_simple_NN(X,
                  ):
 
   # train model
-  model = network.model(num_classes=10, batch_size=BATCH_SIZE)
+  model = network.model(num_classes=10, batch_size=args.batch_size)
   model.compile(
       optimizer=tf.keras.optimizers.Adam(0.001),
       loss=tf.keras.losses.SparseCategoricalCrossentropy(from_logits=True),
@@ -58,21 +56,15 @@ def run_simple_NN(X,
   #(6400,28,28) / (6400,)
   #print(X_train.shape, y_train.shape)
 
-  training_accs = []
-  testing_accs  = []
-
   for i in range(1, n_epochs+1):
-      model.fit(X_train, y_train)
-      training_acc, testing_acc = eval_simple_NN(X_train, y, X_test, y_test, weights, it, n_epochs=n_epochs, mode=mode)
-      e
-
-      training_accs.append(training_acc)
-      testing_accs.append(testing_acc)
+      model.fit(X_train, y_train, batch_size=args.batch_size)
 
       if i > n_epochs-3:
         model.save_weights(CHECKPOINTS_PATH_FORMAT.format(mode, it, i))
 
-  return 
+  train_res, test_res = eval_simple_NN(X_train, y_train, X_test, y_test, weights, it=it, n_epochs=i, mode=mode)
+
+  return  train_res, test_res
   
 # neural network
 def eval_simple_NN(X,
@@ -95,15 +87,15 @@ def eval_simple_NN(X,
       metrics=[tf.keras.metrics.SparseCategoricalAccuracy()],
   )
 
-  training_loss, training_acc = model.evaluate(X,y)
-  testing_loss,  testing_acc  = model.evaluate(X_test, y_test)
+  train_loss, train_acc = model.evaluate(X,y)
+  test_loss,  test_acc  = model.evaluate(X_test, y_test)
 
-  print("train {}% / test acc {}%".format(training_acc, testing_acc))
+  print("train {}% / test acc {}%".format(train_acc, test_acc))
 
-  training_prediction = tf.argmax(model.predict(X), axis=1)
-  testing_prediction  = tf.argmax(model.predict(X_test), axis=1)
+  train_pred = tf.argmax(model.predict(X), axis=1)
+  test_pred  = tf.argmax(model.predict(X_test), axis=1)
 
-  return training_prediction, testing_prediction
+  return (train_acc, train_pred), (test_acc, test_pred)
 
 
 def debias_weights(original_labels, protected_attributes, multipliers):
@@ -115,9 +107,8 @@ def debias_weights(original_labels, protected_attributes, multipliers):
   weights = np.where(original_labels == 2, 1 - weights, weights)
   return weights
 
-def debias_weights_TI(original_labels, multipliers_TI):
-
-  exponents = -multipliers_TI
+def debias_weights_TI(original_labels, protected_attributes, multipliers_TI):
+  exponents = -multipliers_TI * lr
   weights = np.exp(exponents)/ (np.exp(exponents) + np.exp(-exponents))
   weights = np.where(original_labels == 2, 1 - weights, weights)
   return weights

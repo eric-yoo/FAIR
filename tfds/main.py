@@ -4,6 +4,7 @@ import sys
 import numpy as np
 import tensorflow as tf
 import tensorflow_datasets as tfds
+from config import args
 
 def corrupt(index, data, corrupt_indices, biased_label):
     if corrupt_indices[index] == 1:
@@ -40,7 +41,7 @@ def make_mnist_dataset(split, batch_size, with_index=True, is_corrupt=True, corr
 
         if is_corrupt:
             assert split == 'train'
-            np.random.seed(0)
+            np.random.seed(args.seed)
             masks = np.zeros((60000,), int)
             mask_indices = np.random.choice(range(60000), size=int(60000*corrupt_ratio), replace=False)
             masks[mask_indices] = 1
