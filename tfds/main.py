@@ -39,10 +39,27 @@ def make_mnist_dataset(split, batch_size, with_index=True,
             read_config=read_config)
 
         if with_index:
+            try:
+                begin = int(split.split('[')[1].split('%:')[0])
+            except:
+                begin = None
+            try:
+                end = int(split.split(':')[1].split('%]')[0])
+            except:
+                end = None
             indices_range = {'train':range(60000), 'test':range(60000, 70000),
-                            'train[:20%]':range(600*20), 'train[20%:]':range(600*20,600*100),
+                            F'train[{begin}:{end}%]':range(600*20), 'train[20%:]':range(600*20,600*100),
                             **{F'train[{k}%:{k+10}%]':range(600*k, 600*(k+10)) for k in range(20, 100, 10)}
                             }
+            if begin and end:
+                indices_range.update({F'train[{begin}%:{end}%]':range(600*begin, 600*end)})
+            elif begin:
+                indices_range.update({F'train[{begin}%:]':range(600*begin, 60000)})
+            elif end:
+                indices_range.update({F'train[:{end}%]':range(600*end)})
+            else:
+                pass
+            print(indices_range[split])
             indices =  tf.data.Dataset.from_tensor_slices(list(indices_range[split]))
             ds = tf.data.Dataset.zip((indices, ds))
 

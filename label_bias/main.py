@@ -1,4 +1,4 @@
-from config import args, CHECKPOINTS_PATH_FORMAT
+from config import args, CHECKPOINTS_PATH_FORMAT, PRETRAINED_PATH
 import numpy as np
 #import tensorflow.compat.v1 as tf
 #tf.disable_v2_behavior()
@@ -18,6 +18,18 @@ def bias_variable(shape, name="bias_variable"):
   initial = tf.constant(0.1, shape=shape)
   return tf.Variable(initial, name=name)
 
+def pretrain_NN(X, y, pretrain_ratio, n_epochs = 10):
+  model = network.model(num_classes=10, batch_size=args.batch_size)
+  model.compile(
+      optimizer=tf.keras.optimizers.Adam(0.001),
+      loss=tf.keras.losses.SparseCategoricalCrossentropy(from_logits=True),
+      metrics=[tf.keras.metrics.SparseCategoricalAccuracy()],
+  )
+  for i in range(1, n_epochs+1):
+    model.fit(X, y, batch_size=args.batch_size, epochs=n_epochs)
+    if i > n_epochs-3:
+      model.save_weights(PRETRAINED_PATH.format(pretrain_ratio, i))
+  return model
 
 # neural network
 def run_simple_NN(X,
@@ -26,18 +38,22 @@ def run_simple_NN(X,
                   y_test,
                   weights,
                   it=0,
-                  n_epochs=10,
+                  n_epochs=5,
                   # unbiased / biased / lb
-                  mode = "unbiased"
+                  mode = "unbiased", 
+                  pretrained_model = None
                  ):
 
   # train model
-  model = network.model(num_classes=10, batch_size=args.batch_size)
-  model.compile(
-      optimizer=tf.keras.optimizers.Adam(0.001),
-      loss=tf.keras.losses.SparseCategoricalCrossentropy(from_logits=True),
-      metrics=[tf.keras.metrics.SparseCategoricalAccuracy()],
-  )
+  if pretrained_model is None:
+    model = network.model(num_classes=10, batch_size=args.batch_size)
+    model.compile(
+        optimizer=tf.keras.optimizers.Adam(0.001),
+        loss=tf.keras.losses.SparseCategoricalCrossentropy(from_logits=True),
+        metrics=[tf.keras.metrics.SparseCategoricalAccuracy()],
+    )
+  else:
+    model = pretrained_model
 
   # weights for data choice
   if weights is None :

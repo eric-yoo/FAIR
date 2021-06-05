@@ -8,14 +8,14 @@ from config import args, FAIR_PATH_FORMAT
 
 if args.dataset == 'mnist':
   ds_pretrain = make_mnist_dataset('train[:20%]', args.batch_size, True, is_poisoned=False)
-  ds_train = make_mnist_dataset(F'train[20%:80%]', args.batch_size, True, is_poisoned=True, poisoned_ratio=args.poisoned_ratio, poisoned_label=args.poisoned_label)
+  ds_train = make_mnist_dataset(F'train[20%:]', args.batch_size, True, is_poisoned=True, poisoned_ratio=args.poisoned_ratio, poisoned_label=args.poisoned_label)
   ds_test = make_mnist_dataset('test', args.batch_size, True, is_poisoned=False)
 elif args.dataset == 'femnist':
   ds_train = make_femnist_dataset('train', args.batch_size, True, is_poisoned=True, poisoned_ratio=args.poisoned_ratio, poisoned_label=args.poisoned_label)
   ds_test = make_femnist_dataset('test', args.batch_size, True, is_poisoned=False)
 else:
   raise NotImplementedError
-
+quit()
 print(F'pretrain: {get_length(ds_pretrain)*args.batch_size}')
 print(F'train: {get_length(ds_train)*args.batch_size}')
 print(F'test: {get_length(ds_test)*args.batch_size}')
@@ -43,6 +43,8 @@ test_results  = []
 # print("Pretrain 20%")
 # # training on corrupted dataset, testing on correct dataset
 # train_res, test_res = run_simple_NN(train_xs, train_ys, test_xs, test_ys, weights, it=it, n_epochs=5, mode="fair")
+
+pretrained_model = pretrain_NN(pretrain_xs, pretrain_ys, '20%', 5)
 
 for it in range(1, n_iters+1):
     print("Iteration", it, "multiplier", multipliers_TI)

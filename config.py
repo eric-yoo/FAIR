@@ -10,6 +10,7 @@ parser.add_argument('--batch_size', type=int, default=100)
 args = parser.parse_args()
 print(args)
 
-CHECKPOINTS_PATH_FORMAT = "simpleNN/checkpoints/lb_iter{}_ckpt{}"
+CHECKPOINTS_PATH_FORMAT = "simpleNN/checkpoints/{}_iter{}_ckpt{}"
 FAIR_PATH_FORMAT = "simpleNN/checkpoints/fair_iter{}_ckpt{}"
 TRACIN_PATH = "simpleNN/checkpoints/ckpt{}" 
+PRETRAINED_PATH = "simpleNN/checkpoints/pretrain_{}_ckpt{}" 
