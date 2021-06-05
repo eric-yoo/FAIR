@@ -1,4 +1,4 @@
-from tfds.utils import magic_parser
+from tfds.utils import magic_parser, get_length
 import numpy as np
 from tensorflow.keras.datasets import mnist
 from label_bias.main import *
@@ -7,7 +7,8 @@ from tfds.main import make_mnist_dataset, make_femnist_dataset
 from config import args, FAIR_PATH_FORMAT
 
 if args.dataset == 'mnist':
-  ds_train = make_mnist_dataset('train', args.batch_size, True, is_poisoned=True, poisoned_ratio=args.poisoned_ratio, poisoned_label=args.poisoned_label)
+  ds_pretrain = make_mnist_dataset('train[:20%]', args.batch_size, True, is_poisoned=False)
+  ds_train = make_mnist_dataset(F'train[20%:80%]', args.batch_size, True, is_poisoned=True, poisoned_ratio=args.poisoned_ratio, poisoned_label=args.poisoned_label)
   ds_test = make_mnist_dataset('test', args.batch_size, True, is_poisoned=False)
 elif args.dataset == 'femnist':
   ds_train = make_femnist_dataset('train', args.batch_size, True, is_poisoned=True, poisoned_ratio=args.poisoned_ratio, poisoned_label=args.poisoned_label)
@@ -15,8 +16,13 @@ elif args.dataset == 'femnist':
 else:
   raise NotImplementedError
 
+print(F'pretrain: {get_length(ds_pretrain)*args.batch_size}')
+print(F'train: {get_length(ds_train)*args.batch_size}')
+print(F'test: {get_length(ds_test)*args.batch_size}')
+
 ### load dataset
-(train_xs, train_ys) = magic_parser(ds_train)
+(pretrain_xs, pretrain_ys) = magic_parser(ds_pretrain)
+(train_xs, train_ys) = magic_parser(ds_pretrain)
 (test_xs, test_ys) = magic_parser(ds_test)
 
 
@@ -32,6 +38,11 @@ protected_train = [(train_ys == 2)]
 # accuracy on {train,test} data over iterations
 train_results = [] 
 test_results  = []
+
+
+# print("Pretrain 20%")
+# # training on corrupted dataset, testing on correct dataset
+# train_res, test_res = run_simple_NN(train_xs, train_ys, test_xs, test_ys, weights, it=it, n_epochs=5, mode="fair")
 
 for it in range(1, n_iters+1):
     print("Iteration", it, "multiplier", multipliers_TI)

@@ -294,7 +294,7 @@ class TracIn:
 
         return dat
 
-    def report_mislabel_detection(self, trackin_self_influence, biased_label, num_dots=10):
+    def report_mislabel_detection(self, trackin_self_influence, poisoned_label, num_dots=10):
         self_influence_scores = trackin_self_influence['self_influences']
         indices = np.argsort(-self_influence_scores)
         mislabel_detection_report = {}
@@ -315,7 +315,7 @@ class TracIn:
         mislabel_detection_report = {round(k,4):round(v/detected_mislabels,4) for k,v in mislabel_detection_report.items()}
         plt.figure(None)
         plt.plot(list(mislabel_detection_report.keys()), list(mislabel_detection_report.values()))
-        plt.savefig(F'tracin_on_mnist_biased_towards_{biased_label}.png')
+        plt.savefig(F'tracin_on_mnist_biased_towards_{poisoned_label}.png')
 
     def report_test_accuracy(self):
         model = self.models[-1]

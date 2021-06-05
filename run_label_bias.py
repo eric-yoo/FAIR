@@ -1,4 +1,4 @@
-from utils import magic_parser
+from tfds.utils import magic_parser
 import numpy as np
 from tensorflow.keras.datasets import mnist
 from label_bias.main import *
@@ -7,11 +7,11 @@ from tfds.main import make_mnist_dataset, make_femnist_dataset
 from config import args
 
 if args.dataset == 'mnist':
-  ds_train = make_mnist_dataset('train', args.batch_size, True, is_corrupt=True, corrupt_ratio=args.corrupt_ratio, biased_label=args.biased_label)
-  ds_test = make_mnist_dataset('test', args.batch_size, True, is_corrupt=False)
+  ds_train = make_mnist_dataset('train', args.batch_size, True, is_poisoned=True, poisoned_ratio=args.poisoned_ratio, poisoned_label=args.poisoned_label)
+  ds_test = make_mnist_dataset('test', args.batch_size, True, is_poisoned=False)
 elif args.dataset == 'femnist':
-  ds_train = make_femnist_dataset('train', args.batch_size, True, is_corrupt=True, corrupt_ratio=args.corrupt_ratio, biased_label=args.biased_label)
-  ds_test = make_femnist_dataset('test', args.batch_size, True, is_corrupt=False)
+  ds_train = make_femnist_dataset('train', args.batch_size, True, is_poisoned=True, poisoned_ratio=args.poisoned_ratio, poisoned_label=args.poisoned_label)
+  ds_test = make_femnist_dataset('test', args.batch_size, True, is_poisoned=False)
 else:
   raise NotImplementedError
 
