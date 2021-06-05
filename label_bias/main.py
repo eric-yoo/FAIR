@@ -18,7 +18,7 @@ def bias_variable(shape, name="bias_variable"):
   initial = tf.constant(0.1, shape=shape)
   return tf.Variable(initial, name=name)
 
-def pretrain_NN(X, y, pretrain_ratio, n_epochs = 10):
+def pretrain_NN(X, y, test_xs, test_ys, pretrain_ratio, n_epochs = 10):
   model = network.model(num_classes=10, batch_size=args.batch_size)
   model.compile(
       optimizer=tf.keras.optimizers.Adam(0.001),
@@ -26,9 +26,10 @@ def pretrain_NN(X, y, pretrain_ratio, n_epochs = 10):
       metrics=[tf.keras.metrics.SparseCategoricalAccuracy()],
   )
   for i in range(1, n_epochs+1):
-    model.fit(X, y, batch_size=args.batch_size, epochs=n_epochs)
+    model.fit(X, y, batch_size=args.batch_size)
     if i > n_epochs-3:
       model.save_weights(PRETRAINED_PATH.format(pretrain_ratio, i))
+  eval_simple_NN(X, y, test_xs, test_ys, None, PRETRAINED_PATH.format(pretrain_ratio, i))
   return model
 
 # neural network
@@ -36,7 +37,7 @@ def run_simple_NN(X,
                   y,
                   X_test,
                   y_test,
-                  weights,
+                  weights = None,
                   it=0,
                   n_epochs=5,
                   # unbiased / biased / lb
@@ -78,7 +79,7 @@ def run_simple_NN(X,
       if i > n_epochs-3:
         model.save_weights(CHECKPOINTS_PATH_FORMAT.format(mode, it, i))
 
-  train_res, test_res = eval_simple_NN(X_train, y_train, X_test, y_test, weights, it=it, n_epochs=i, mode=mode)
+  train_res, test_res = eval_simple_NN(X_train, y_train, X_test, y_test, weights, CHECKPOINTS_PATH_FORMAT.format(mode, it, i))
 
   return  train_res, test_res
   
@@ -88,14 +89,11 @@ def eval_simple_NN(X,
                   X_test,
                   y_test,
                   weights,
-                  it=0,
-                  n_epochs=10,
-                  # unbiased / biased / lb
-                  mode = "unbiased"
+                  weight_path
                  ):
 
   model = network.model(num_classes=10, batch_size=None)
-  model.load_weights(CHECKPOINTS_PATH_FORMAT.format(mode, it, n_epochs)).expect_partial()
+  model.load_weights(weight_path).expect_partial()
 
   model.compile(
       optimizer=tf.keras.optimizers.Adam(0.001),
@@ -124,7 +122,7 @@ def debias_weights(original_labels, protected_attributes, multipliers):
   return weights
 
 def debias_weights_TI(original_labels, protected_attributes, multipliers_TI):
-  exponents = -multipliers_TI * lr
+  exponents = -multipliers_TI
   weights = np.exp(exponents)/ (np.exp(exponents) + np.exp(-exponents))
   weights = np.where(original_labels == 2, 1 - weights, weights)
   return weights

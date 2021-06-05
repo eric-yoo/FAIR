@@ -14,7 +14,7 @@ if True:
 
     # arguments: ds_train, ds_test, ckpt1 
     tracin = TracIn(ds_train, ds_test, \
-        CHECKPOINTS_PATH_FORMAT.format(3), CHECKPOINTS_PATH_FORMAT.format(4), CHECKPOINTS_PATH_FORMAT.format(5), \
+        CHECKPOINTS_PATH_FORMAT.format(args.n_epochs-2), CHECKPOINTS_PATH_FORMAT.format(args.n_epochs-1), CHECKPOINTS_PATH_FORMAT.format(args.n_epochs), \
          #'','','',
         True)
 

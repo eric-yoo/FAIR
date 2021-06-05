@@ -40,7 +40,7 @@ for it in range(1, n_iters+1):
     print("Weights for 2 : {}".format(np.sum(weights[np.where(train_ys==2)])))
 
     # training on corrupted dataset, testing on correct dataset
-    train_res, test_res = run_simple_NN(train_xs, train_ys, test_xs, test_ys, weights, it=it, n_epochs=5, mode="lb")
+    train_res, test_res = run_simple_NN(train_xs, train_ys, test_xs, test_ys, weights, it=it, n_epochs=args.n_epochs, mode="lb")
 
     train_results.append(train_res)
     test_results.append(test_res)

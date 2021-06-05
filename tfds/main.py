@@ -59,7 +59,6 @@ def make_mnist_dataset(split, batch_size, with_index=True,
                 indices_range.update({F'train[:{end}%]':range(600*end)})
             else:
                 pass
-            print(indices_range[split])
             indices =  tf.data.Dataset.from_tensor_slices(list(indices_range[split]))
             ds = tf.data.Dataset.zip((indices, ds))
 
