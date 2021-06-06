@@ -6,7 +6,16 @@ from tracin.main import TracIn
 from tfds.main import make_mnist_dataset, make_femnist_dataset
 from config import args, FAIR_PATH_FORMAT
 
-pretrain_ratio = args.pretrain_ratio
+pretrain_ratio = args.pretrain_ratio # default 20%. -> 5epoch 학습하면 test acc 94% 정도 나옴
+'''
+  three data partitions
+  - 60000 samples for pretrain & train
+    - ds_pretrain: clean data (60000 * args.pretrain_ratio)
+    - ds_train: corrupt data (60000 * (1-args.pretrain_ratio))
+      - TODO: implement other types of corruption
+  - 10000 samples for test
+    - ds_test: clean data (10000)
+'''
 if args.dataset == 'mnist':
   ds_pretrain = make_mnist_dataset(F'train[:{pretrain_ratio}]', args.batch_size, True, is_poisoned=False)
   ds_train = make_mnist_dataset(F'train[{pretrain_ratio}:]', args.batch_size, True, is_poisoned=True, poisoned_ratio=args.poisoned_ratio, poisoned_label=args.poisoned_label)
@@ -45,8 +54,19 @@ test_results  = []
 # # training on corrupted dataset, testing on correct dataset
 # train_res, test_res = run_simple_NN(train_xs, train_ys, test_xs, test_ys, weights, it=it, n_epochs=5, mode="fair")
 
+'''
+first, pretrain with small clean data
+'''
 pretrained_model = pretrain_NN(pretrain_xs, pretrain_ys, test_xs, test_ys, pretrain_ratio, n_epochs = args.n_epochs)
 
+'''
+run FAIR
+if test acc < 0.9:
+  use pretrained model for TracIn
+else:
+  use the current model for TracIn
+TODO: FAIR 알고리즘 구현 덜끝난듯? + 실험 아직 안해봄.
+'''
 for it in range(1, n_iters+1):
     print("Iteration", it, "multiplier", multipliers_TI)
     weights = debias_weights_TI(train_ys, protected_train, multipliers_TI)
