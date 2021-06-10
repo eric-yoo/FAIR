@@ -8,6 +8,7 @@ from config import args, CHECKPOINTS_PATH_FORMAT
 
 if args.dataset == 'mnist':
   ds_train = make_mnist_dataset('train', args.batch_size, True, is_poisoned=True, poisoned_ratio=args.poisoned_ratio, poisoned_label=args.poisoned_label)
+  ds_train_gt = make_mnist_dataset(F'train[{pretrain_ratio}:]', args.batch_size, True, is_poisoned=False)
   ds_test = make_mnist_dataset('test', args.batch_size, True, is_poisoned=False)
 elif args.dataset == 'femnist':
   ds_train = make_femnist_dataset('train', args.batch_size, True, is_poisoned=True, poisoned_ratio=args.poisoned_ratio, poisoned_label=args.poisoned_label)

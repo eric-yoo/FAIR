@@ -20,8 +20,9 @@ pretrain_ratio = args.pretrain_ratio # default 20%. -> 5epoch 학습하면 test 
 '''
 if args.dataset == 'mnist':
   ds_pretrain = make_mnist_dataset(F'train[:{pretrain_ratio}]', args.batch_size, True, is_poisoned=False)
-  ds_train = make_mnist_dataset(F'train[{pretrain_ratio}:]', args.batch_size, True, is_poisoned=True, poisoned_ratio=args.poisoned_ratio, poisoned_label=args.poisoned_label)
-  ds_test = make_mnist_dataset('test', args.batch_size, True, is_poisoned=False)
+  ds_train    = make_mnist_dataset(F'train[{pretrain_ratio}:]', args.batch_size, True, is_poisoned=True, poisoned_ratio=args.poisoned_ratio, poisoned_label=args.poisoned_label)
+  ds_train_gt = make_mnist_dataset(F'train[{pretrain_ratio}:]', args.batch_size, True, is_poisoned=False)
+  ds_test     = make_mnist_dataset('test', args.batch_size, True, is_poisoned=False)
 elif args.dataset == 'femnist':
   ds_train = make_femnist_dataset('train', args.batch_size, True, is_poisoned=True, poisoned_ratio=args.poisoned_ratio, poisoned_label=args.poisoned_label)
   ds_test = make_femnist_dataset('test', args.batch_size, True, is_poisoned=False)
@@ -35,23 +36,23 @@ print(F'test: {get_length(ds_test)*args.batch_size}')
 ### load dataset
 (pretrain_xs, pretrain_ys) = magic_parser(ds_pretrain)
 (train_xs, train_ys) = magic_parser(ds_train)
+(_, train_ys_gt) = magic_parser(ds_train_gt)
 (test_xs, test_ys) = magic_parser(ds_test)
 
 
 ### Label bias
-print("=============== biased MNIST label bias training ===============")
+print("=============== Pretraining for stable Tracin ===============")
 
 weights = np.ones(train_xs.shape[0])
 multipliers_TI = np.zeros(train_xs.shape[0])
 label_bias_lr = 1.0
-n_iters = 100
-protected_train = [(train_ys == 2)]
+n_iters = 20
+# protected_train = [(train_ys == 2)]
 
 #TRACIN
 # accuracy on {train,test} data over iterations
 train_results = [] 
 test_results  = []
-
 
 # print("Pretrain 20%")
 # # training on corrupted dataset, testing on correct dataset
@@ -62,6 +63,10 @@ first, pretrain with small clean data
 '''
 pretrained_model = pretrain_NN(pretrain_xs, pretrain_ys, test_xs, test_ys, pretrain_ratio, n_epochs = args.n_epochs)
 
+print()
+print()
+
+print("=============== biased MNIST label bias training ===============")
 '''
 run FAIR
 if test acc < 0.9:
@@ -71,7 +76,7 @@ else:
 TODO: FAIR 알고리즘 구현 덜끝난듯? + 실험 아직 안해봄.
 '''
 for it in range(1, n_iters+1):
-    weights -= 0.03 * debias_weights_TI(train_ys, protected_train, multipliers_TI)
+    weights -= 0.03 * debias_weights_TI(train_ys, None, multipliers_TI)
     weights = weights / np.sum(weights)
     print("Iteration", it, "weights", weights)
 
@@ -90,7 +95,7 @@ for it in range(1, n_iters+1):
     # each res consists of (acc,predictions)
     train_pred = train_res[1]
     
-    violation = np.mean(train_pred == 2) - 0.1
+    violation = sum([ np.mean(train_pred == cls) - np.mean(train_ys_gt == cls) for cls in range(len(np.unique(test_ys))) ])
     print("violation: {}".format(violation))
 
     if test_res[0] <= 0.93:
