@@ -81,6 +81,8 @@ def run_simple_NN(X,
 
   train_res, test_res = eval_simple_NN(X_train, y_train, X_test, y_test, weights, CHECKPOINTS_PATH_FORMAT.format(mode, it, i))
 
+  print("Test acc is:",test_res[0])
+
   return  train_res, test_res
   
 # neural network
@@ -111,6 +113,38 @@ def eval_simple_NN(X,
 
   return (train_acc, train_pred), (test_acc, test_pred)
 
+# neural network
+def eval_simple_NN_by_class(X,
+                  y,
+                  X_test,
+                  y_test,
+                  weights,
+                  weight_path
+                 ):
+
+  model = network.model(num_classes=10, batch_size=None)
+  model.load_weights(weight_path).expect_partial()
+
+  model.compile(
+      optimizer=tf.keras.optimizers.Adam(0.001),
+      loss=tf.keras.losses.SparseCategoricalCrossentropy(from_logits=True),
+      metrics=[tf.keras.metrics.SparseCategoricalAccuracy()],
+  )
+
+  train_loss, train_acc = model.evaluate(X,y)
+  test_loss,  test_acc  = model.evaluate(X_test, y_test)
+
+  print("train {}% / test acc {}%".format(train_acc, test_acc))
+
+  for i in range(10):
+      X_test_i = X_test[y_test == i]
+      y_test_i = np.array([i for n in range(X_test_i.shape[0])])
+
+      _,  test_i_acc  = model.evaluate(X_test_i, y_test_i)
+
+      print("test acc for class {} : {}%".format(i, test_i_acc))
+
+  return
 
 def debias_weights(original_labels, protected_attributes, multipliers):
 
@@ -124,6 +158,8 @@ def debias_weights(original_labels, protected_attributes, multipliers):
 def debias_weights_TI(original_labels, protected_attributes, multipliers_TI):
   exponents = -multipliers_TI
   weights = np.exp(exponents)/ (np.exp(exponents) + np.exp(-exponents))
-  weights = np.where(original_labels == 2, 1 - weights, weights)
+
+  print("min {} max {}".format(np.min(weights), np.max(weights)))
+
   return weights
 

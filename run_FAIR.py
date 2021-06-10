@@ -6,6 +6,8 @@ from tracin.main import TracIn
 from tfds.main import make_mnist_dataset, make_femnist_dataset
 from config import args, FAIR_PATH_FORMAT
 
+import pandas as pd 
+
 if args.dataset == 'mnist':
   ds_train = make_mnist_dataset('train', args.batch_size, True, is_poisoned=True, poisoned_ratio=args.poisoned_ratio, poisoned_label=args.poisoned_label)
   ds_test = make_mnist_dataset('test', args.batch_size, True, is_poisoned=False)
@@ -33,6 +35,7 @@ protected_train = [(train_ys == 2)]
 train_results = [] 
 test_results  = []
 
+
 for it in range(1, n_iters+1):
     print("Iteration", it, "multiplier", multipliers_TI)
     weights = debias_weights_TI(train_ys, protected_train, multipliers_TI)
@@ -43,8 +46,8 @@ for it in range(1, n_iters+1):
     # training on corrupted dataset, testing on correct dataset
     train_res, test_res = run_simple_NN(train_xs, train_ys, test_xs, test_ys, weights, it=it, n_epochs=5, mode="fair")
 
-    train_results.append(train_res)
-    test_results.append(test_res)
+    train_results.append(train_res[0])
+    test_results.append(test_res[0])
 
     if test_res[0] > 0.97 and train_res[0] > 0.97 :
         print("EARLY EXIT @ iteration {} : Target accuracy achieved {}".format(it, test_res[0]))
@@ -62,10 +65,11 @@ for it in range(1, n_iters+1):
         True)
 
     # multipliers -= label_bias_lr * violation
-    multiplier_TI = tracin.self_influence_tester(tracin.trackin_train_self_influences,violation)
+    multipliers_TI = tracin.self_influence_tester(tracin.trackin_train_self_influences,violation)
 
     print()
     print()
 
 # acc data over iterations for plot
-test_res_it = [res[1] for res in test_results]
+df = pd.DataFrame(test_results)
+df.to_csv(F"testAccFAIR_p{args.poisoned_ratio}.csv")

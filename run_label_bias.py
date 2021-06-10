@@ -4,7 +4,7 @@ from tensorflow.keras.datasets import mnist
 from label_bias.main import *
 from tracin.main import TracIn
 from tfds.main import make_mnist_dataset, make_femnist_dataset
-from config import args
+from config import args, CHECKPOINTS_PATH_FORMAT
 
 if args.dataset == 'mnist':
   ds_train = make_mnist_dataset('train', args.batch_size, True, is_poisoned=True, poisoned_ratio=args.poisoned_ratio, poisoned_label=args.poisoned_label)
@@ -25,7 +25,7 @@ print("=============== biased MNIST label bias training (run_label_bias.py)=====
 
 multipliers = np.zeros(1)
 label_bias_lr = 1.0
-n_iters = 100
+n_iters = 2
 protected_train = [(train_ys == 2)]
 
 # accuracy on {train,test} data over iterations
@@ -40,7 +40,10 @@ for it in range(1, n_iters+1):
     print("Weights for 2 : {}".format(np.sum(weights[np.where(train_ys==2)])))
 
     # training on corrupted dataset, testing on correct dataset
-    train_res, test_res = run_simple_NN(train_xs, train_ys, test_xs, test_ys, weights, it=it, n_epochs=args.n_epochs, mode="lb")
+    # train_res, test_res = run_simple_NN(train_xs, train_ys, test_xs, test_ys, weights, it=it, n_epochs=args.n_epochs, mode="lb")
+    eval_simple_NN_by_class(train_xs, train_ys, test_xs, test_ys, \
+                            None, CHECKPOINTS_PATH_FORMAT.format("unbiased",0,5))
+    exit(1)
 
     train_results.append(train_res)
     test_results.append(test_res)
