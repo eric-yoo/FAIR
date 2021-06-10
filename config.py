@@ -3,7 +3,7 @@ import argparse
 parser = argparse.ArgumentParser(description='Process some integers.')
 parser.add_argument('--dataset', type=str, default='mnist')
 parser.add_argument('--seed', type=int, default=1)
-parser.add_argument('--poisoned_ratio', type=float, default=0.2)
+parser.add_argument('--poisoned_ratio', type=float, default=0.3)
 parser.add_argument('--poisoned_label', type=int, default=2)
 parser.add_argument('--batch_size', type=int, default=100)
 parser.add_argument('--n_epochs', type=int, default=5)

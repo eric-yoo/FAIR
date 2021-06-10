@@ -117,24 +117,62 @@ def make_femnist_dataset(split, batch_size, with_index=True, is_poisoned=True, p
             read_config=read_config)
 
         if with_index:
-            indices_range = {'train':range(60000), 'test':range(60000, 70000)}
+            try:
+                begin = int(split.split('[')[1].split('%:')[0])
+            except:
+                begin = None
+            try:
+                end = int(split.split(':')[1].split('%]')[0])
+            except:
+                end = None
+            indices_range = {'train':range(60000), 'test':range(60000, 70000),
+                            F'train[{begin}:{end}%]':range(600*20), 'train[20%:]':range(600*20,600*100),
+                            **{F'train[{k}%:{k+10}%]':range(600*k, 600*(k+10)) for k in range(20, 100, 10)}
+                            }
+            if begin and end:
+                indices_range.update({F'train[{begin}%:{end}%]':range(600*begin, 600*end)})
+            elif begin:
+                indices_range.update({F'train[{begin}%:]':range(600*begin, 60000)})
+            elif end:
+                indices_range.update({F'train[:{end}%]':range(600*end)})
+            else:
+                pass
             indices =  tf.data.Dataset.from_tensor_slices(list(indices_range[split]))
             ds = tf.data.Dataset.zip((indices, ds))
 
         if is_poisoned:
-            assert split == 'train'
-            np.random.seed(0)
+            assert 'train' in split
+            np.random.seed(args.seed)
             masks = np.zeros((60000,), int)
             mask_indices = np.random.choice(range(60000), size=int(60000*poisoned_ratio), replace=False)
             masks[mask_indices] = 1
             corrupt_indices = tf.convert_to_tensor(masks, tf.int64)
             ds = ds.map(lambda index, data: (index, corrupt(index, data, corrupt_indices, poisoned_label=poisoned_label)))
         
+        # if is_noisy:
+        #     assert 'train' in split
+        #     np.random.seed(args.seed)
+        #     masks = np.zeros((60000,), int)
+        #     mask_indices = np.random.choice(range(60000), size=int(60000*poisoned_ratio), replace=False)
+        #     masks[mask_indices] = 1
+        #     corrupt_indices = tf.convert_to_tensor(masks, tf.int64)
+        #     ds = ds.map(lambda index, data: (index, corrupt(index, data, corrupt_indices, poisoned_label=poisoned_label)))
+        
+        # if is_mislabeled:
+        #     assert 'train' in split
+        #     np.random.seed(args.seed)
+        #     masks = np.zeros((60000,), int)
+        #     mask_indices = np.random.choice(range(60000), size=int(60000*mislabel_ratio), replace=False)
+        #     masks[mask_indices] = 1
+        #     corrupt_indices = tf.convert_to_tensor(masks, tf.int64)
+        #     ds = ds.map(lambda index, data: (index, corrupt(index, data, corrupt_indices, poisoned_label=poisoned_label)))
+        
+
         ds = ds.map( lambda index, data: (index, normalize(data)))
         counts = [0]*10
         for d in ds:
             counts[d[1]['label'].numpy()] +=1
-        print(counts)
+        print(split, counts)
 
         ds = ds.batch(batch_size)
         ds = ds.prefetch(tf.data.experimental.AUTOTUNE)

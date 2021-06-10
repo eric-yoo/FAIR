@@ -26,7 +26,7 @@ def pretrain_NN(X, y, test_xs, test_ys, pretrain_ratio, n_epochs = 10):
       metrics=[tf.keras.metrics.SparseCategoricalAccuracy()],
   )
   for i in range(1, n_epochs+1):
-    model.fit(X, y, batch_size=args.batch_size)
+    model.fit(X, y, batch_size=args.batch_size, verbose=0)
     if i > n_epochs-3:
       model.save_weights(PRETRAINED_PATH.format(pretrain_ratio, i))
   eval_simple_NN(X, y, test_xs, test_ys, None, PRETRAINED_PATH.format(pretrain_ratio, i))
@@ -66,7 +66,7 @@ def run_simple_NN(X,
 
   else :
       weights_ = weights / (1. * np.sum(weights))
-      ns = np.random.choice(range(len(X)), len(X), replace=True, p=weights)
+      ns = np.random.choice(range(len(X)), len(X), replace=True, p=weights_)
       X_train = X[ns,:]
       y_train = y[ns]
 
@@ -74,14 +74,14 @@ def run_simple_NN(X,
   #print(X_train.shape, y_train.shape)
 
   for i in range(1, n_epochs+1):
-      model.fit(X_train, y_train, batch_size=args.batch_size)
+      model.fit(X_train, y_train, batch_size=args.batch_size, verbose=0)
 
       if i > n_epochs-3:
         model.save_weights(CHECKPOINTS_PATH_FORMAT.format(mode, it, i))
 
   train_res, test_res = eval_simple_NN(X_train, y_train, X_test, y_test, weights, CHECKPOINTS_PATH_FORMAT.format(mode, it, i))
-
-  print("Test acc is:",test_res[0])
+  eval_simple_NN_by_class(X_train, y_train, X_test, y_test, weights, CHECKPOINTS_PATH_FORMAT.format(mode, it, i))
+  # print("Test acc is:",test_res[0])
 
   return  train_res, test_res
   
@@ -103,10 +103,10 @@ def eval_simple_NN(X,
       metrics=[tf.keras.metrics.SparseCategoricalAccuracy()],
   )
 
-  train_loss, train_acc = model.evaluate(X,y)
-  test_loss,  test_acc  = model.evaluate(X_test, y_test)
+  train_loss, train_acc = model.evaluate(X,y, verbose=0)
+  test_loss,  test_acc  = model.evaluate(X_test, y_test, verbose=0)
 
-  print("train {}% / test acc {}%".format(train_acc, test_acc))
+  print("train {}% / test acc {}%".format(train_acc*100, test_acc*100))
 
   train_pred = tf.argmax(model.predict(X), axis=1)
   test_pred  = tf.argmax(model.predict(X_test), axis=1)
@@ -131,20 +131,19 @@ def eval_simple_NN_by_class(X,
       metrics=[tf.keras.metrics.SparseCategoricalAccuracy()],
   )
 
-  train_loss, train_acc = model.evaluate(X,y)
-  test_loss,  test_acc  = model.evaluate(X_test, y_test)
+  train_loss, train_acc = model.evaluate(X,y, verbose=0)
+  test_loss,  test_acc  = model.evaluate(X_test, y_test, verbose=0)
 
-  print("train {}% / test acc {}%".format(train_acc, test_acc))
-
+  # print("train {}% / test acc {}%".format(train_acc, test_acc))
+  test_accs = {}
   for i in range(10):
       X_test_i = X_test[y_test == i]
       y_test_i = np.array([i for n in range(X_test_i.shape[0])])
 
-      _,  test_i_acc  = model.evaluate(X_test_i, y_test_i)
+      _,  test_i_acc  = model.evaluate(X_test_i, y_test_i, verbose=0)
+      test_accs[str(i)] = str(test_i_acc * 100) + '%'
 
-      print("test acc for class {} : {}%".format(i, test_i_acc))
-
-  return
+  # print("test accs: {}".format(test_accs))
 
 def debias_weights(original_labels, protected_attributes, multipliers):
 

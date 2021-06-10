@@ -280,17 +280,23 @@ class TracIn:
             #    plt.imshow(img, interpolation='nearest')
             #    plt.show()
 
-    def self_influence_tester(self, trackin_self_influence, violation=.1):
+    # 1. thresholding, 2. self-influence score 그대로 넘기기
+    def self_influence_tester(self, trackin_self_influence, eps = 1e-5):
         self_influence_scores = trackin_self_influence['self_influences']
-        indices = np.argsort(-self_influence_scores)
-        sorted_scores = np.sort(-self_influence_scores)
-        length = len(trackin_self_influence['labels'])
-        selected_indices = indices[:int(violation*length)]
+        # dat = np.maximum(np.log10(self_influence_scores+eps),0) # magic number 10
+        dat = np.log10(self_influence_scores+eps)
+        MAX = np.max(dat); MIN = np.min(dat)
+        dat = (dat-MIN)/(MAX-MIN)
+        dat = np.where(dat>=0.5, 1, 0)
+        print(np.count_nonzero(dat))
         
-        dat = np.zeros(length, int)
-        dat[selected_indices] = 1
-
+        indices = np.argsort(-self_influence_scores)
+        for i in range(5):
+            print('label:',self.trackin_train['labels'][indices[i]], 'pred:', self.trackin_train['predicted_labels'][indices[i]], end=' /')
+            # plt.imshow(self.trackin_train['images'][indices[i]].reshape(28,28))
+            # plt.show()
         # print(len(selected_indices))
+        print()
 
         return dat
 
