@@ -8,7 +8,7 @@ from config import args, FAIR_PATH_FORMAT, RCL_SINGLE_PATH, PRETRAINED_PATH
 
 import pandas as pd
 
-# baseline setting
+# ideal setting
 pretrain_ratio = '0%'
 '''
   three data partitions
@@ -26,8 +26,8 @@ elif args.dataset == 'femnist':
   dataset_maker = make_femnist_dataset
 else:
   raise NotImplementedError
-ds_train    = dataset_maker(F'train', args.batch_size, True, is_poisoned=True, poisoned_ratio=args.poisoned_ratio, poisoned_label=args.poisoned_label)
-ds_train_gt = dataset_maker(F'train', args.batch_size, True, is_poisoned=False)
+ds_train    = dataset_maker(F'train', args.batch_size, True, is_poisoned=False)
+ds_train_gt = ds_train
 ds_test     = dataset_maker('test', args.batch_size, True, is_poisoned=False)
 
 print(F'train: {get_length(ds_train)*args.batch_size}')
@@ -137,6 +137,6 @@ df_acc     = pd.DataFrame(test_results)
 df_acc_cls = pd.DataFrame(test_results_class)
 df_vio     = pd.DataFrame(violations)
 
-df_acc.to_csv(F"test_baseline_accuracy_p{args.poisoned_ratio}.csv")
-df_acc_cls.to_csv(F"test_baseline_accuracy_cls_p{args.poisoned_ratio}.csv")
-df_vio.to_csv(F"test_baseline_violation_p{args.poisoned_ratio}.csv")
+df_acc.to_csv(F"test_ideal_accuracy_p{args.poisoned_ratio}.csv")
+df_acc_cls.to_csv(F"test_ideal_accuracy_cls_p{args.poisoned_ratio}.csv")
+df_vio.to_csv(F"test_ideal_violation_p{args.poisoned_ratio}.csv")

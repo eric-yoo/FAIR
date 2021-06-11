@@ -131,7 +131,7 @@ def eval_simple_NN_by_class(X,
       metrics=[tf.keras.metrics.SparseCategoricalAccuracy()],
   )
 
-  train_loss, train_acc = model.evaluate(X,y, verbose=0)
+  # train_loss, train_acc = model.evaluate(X,y, verbose=0)
   test_loss,  test_acc  = model.evaluate(X_test, y_test, verbose=0)
 
   # print("train {}% / test acc {}%".format(train_acc, test_acc))
@@ -144,6 +144,7 @@ def eval_simple_NN_by_class(X,
       test_accs[str(i)] = str(test_i_acc * 100) + '%'
 
   # print("test accs: {}".format(test_accs))
+  return test_accs
 
 def debias_weights(original_labels, protected_attributes, multipliers):
 
