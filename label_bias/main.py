@@ -141,7 +141,7 @@ def eval_simple_NN_by_class(X,
       y_test_i = np.array([i for n in range(X_test_i.shape[0])])
 
       _,  test_i_acc  = model.evaluate(X_test_i, y_test_i, verbose=0)
-      test_accs[str(i)] = str(test_i_acc * 100) + '%'
+      test_accs[str(i)] = str(test_i_acc)
 
   # print("test accs: {}".format(test_accs))
   return test_accs

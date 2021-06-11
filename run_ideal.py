@@ -67,7 +67,7 @@ violations          = []
 # print()
 # print()
 
-print("=============== biased MNIST label bias training ===============")
+print("=============== biased MNIST ideal training ===============")
 '''
 run FAIR
 if test acc < 0.9:
