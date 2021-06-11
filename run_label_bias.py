@@ -28,7 +28,7 @@ print("=============== biased MNIST label bias training ===============")
 
 multipliers = np.zeros(1)
 label_bias_lr = 1.0
-n_iters = 2
+n_iters = 10
 protected_train = [(train_ys == 2)]
 
 # accuracy on {train,test} data over iterations
@@ -45,7 +45,8 @@ for it in range(1, n_iters+1):
     print("Weights for 2 : {}".format(np.sum(weights[np.where(train_ys==2)])))
 
     # training on corrupted dataset, testing on correct dataset
-    train_res, test_res = run_simple_NN(train_xs, train_ys, test_xs, test_ys, weights, it=it, n_epochs=args.n_epochs, mode="lb")
+    train_res, test_res = run_simple_NN(train_xs, train_ys, test_xs, test_ys, weights, \
+                                        it=it, n_epochs=args.n_epochs, mode="lb")
     test_res_class      = eval_simple_NN_by_class(train_xs, train_ys, test_xs, test_ys, \
                             None, CHECKPOINTS_PATH_FORMAT.format("lb", it, args.n_epochs))
 
@@ -65,9 +66,9 @@ for it in range(1, n_iters+1):
     ### get Tracin multiplier ###
     #multiplier_TI = TracIn(train_xs, train_ys).self_influence_tester()
 
-    if test_res[0] > 0.97 :
-        print("EARLY EXIT @ iteration {} : Target accuracy achieved {}".format(it, test_res[0]))
-        break
+    # if test_res[0] > 0.97 :
+    #     print("EARLY EXIT @ iteration {} : Target accuracy achieved {}".format(it, test_res[0]))
+    #     break
     
     print()
     print()

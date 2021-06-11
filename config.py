@@ -14,6 +14,6 @@ print(args)
 
 CHECKPOINTS_PATH_FORMAT = "simpleNN/checkpoints/{}_iter{}_ckpt{}"
 FAIR_PATH_FORMAT = "simpleNN/checkpoints/fair_iter{}_ckpt{}"
+FAIR_NAIVE_PATH_FORMAT = "simpleNN/checkpoints/fair_naive_iter{}_ckpt{}"
 TRACIN_PATH = "simpleNN/checkpoints/ckpt{}" 
 PRETRAINED_PATH = "simpleNN/checkpoints/pretrain_{}_ckpt{}" 
-RCL_SINGLE_PATH = "simpleNN/checkpoints/RCL_single_iter{}_ckpt{}" 

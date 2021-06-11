@@ -2,7 +2,7 @@ import matplotlib.pyplot as plt
 import numpy as np
 import tensorflow as tf
 import pandas as pd
-from config import args, TRACIN_PATH
+from config import args, TRACIN_PATH, CHECKPOINTS_PATH_FORMAT
 
 from simpleNN import network
 

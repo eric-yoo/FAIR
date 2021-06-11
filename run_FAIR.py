@@ -4,7 +4,7 @@ from tensorflow.keras.datasets import mnist
 from label_bias.main import *
 from tracin.main import TracIn
 from tfds.main import make_mnist_dataset, make_femnist_dataset
-from config import args, FAIR_PATH_FORMAT, RCL_SINGLE_PATH, PRETRAINED_PATH
+from config import args, FAIR_PATH_FORMAT, PRETRAINED_PATH
 
 import pandas as pd
 
@@ -47,13 +47,15 @@ print("=============== Pretraining for stable Tracin ===============")
 weights = np.ones(train_xs.shape[0])
 multipliers_TI = np.zeros(train_xs.shape[0])
 fair_lr = 0.03
-n_iters = 20
+n_iters = 10
 # protected_train = [(train_ys == 2)]
 
 #TRACIN
 # accuracy on {train,test} data over iterations
-train_results = [] 
-test_results  = []
+train_results       = [] 
+test_results        = []
+test_results_class  = []
+violations          = []
 
 # print("Pretrain 20%")
 # # training on corrupted dataset, testing on correct dataset
@@ -83,27 +85,29 @@ for it in range(1, n_iters+1):
     # MAX = np.max(weights); MIN = np.min(weights)
     # weights = (weights-MIN + eps2)/(MAX-MIN + eps2)
     weights = weights / np.sum(weights)
-    print("Iteration", it, "weights", weights)
+    # print("Iteration", it, "weights", weights)
 
     # print("Weights for 2 : {}".format(np.sum(weights[np.where(train_ys==2)])))
 
     # training on corrupted dataset, testing on correct dataset
-    train_res, test_res = run_simple_NN(train_xs, train_ys, test_xs, test_ys, weights, it=it, n_epochs=args.n_epochs, mode="RCL_single")
+    train_res, test_res = run_simple_NN(train_xs, train_ys, test_xs, test_ys, weights,\
+                                         it=it, n_epochs=args.n_epochs, mode="fair")
+    test_res_class      = eval_simple_NN_by_class(train_xs, train_ys, test_xs, test_ys, \
+                            None, CHECKPOINTS_PATH_FORMAT.format("fair", it, args.n_epochs))
 
-    train_results.append(train_res[0])
+    # each res consists of (acc,predictions)
+    train_pred = train_res[1]
+    
+    violation = [ np.abs(np.mean(train_pred == cls) - np.mean(train_ys_gt == cls)) for cls in range(len(np.unique(test_ys))) ]
+
     test_results.append(test_res[0])
+    test_results_class.append(test_res_class)
+    violations.append(violation)
 
     if test_res[0] > 0.97 and train_res[0] > 0.97 :
         print("EARLY EXIT @ iteration {} : Target accuracy achieved {}".format(it, test_res[0]))
         break
     
-    # each res consists of (acc,predictions)
-    train_pred = train_res[1]
-    
-    violation = [ np.abs(np.mean(train_pred == cls) - np.mean(train_ys_gt == cls)) for cls in range(len(np.unique(test_ys))) ]
-    violation = [round(a,4) for a in violation]
-    print("violation: {}".format(violation))
-
     if test_res[0] <= 0.93:
       # instantiate TRACIN
       tracin = TracIn(ds_train, ds_test, \
@@ -112,7 +116,9 @@ for it in range(1, n_iters+1):
     else:
       # instantiate TRACIN
       tracin = TracIn(ds_train, ds_test, \
-          RCL_SINGLE_PATH.format(it, args.n_epochs-2), RCL_SINGLE_PATH.format(it, args.n_epochs-1), RCL_SINGLE_PATH.format(it, args.n_epochs), \
+          FAIR_PATH_FORMAT.format(it, args.n_epochs-2), \
+          FAIR_PATH_FORMAT.format(it, args.n_epochs-1), \
+          FAIR_PATH_FORMAT.format(it, args.n_epochs), \
           True)
 
     multipliers_TI = tracin.self_influence_tester(tracin.trackin_train_self_influences)
@@ -121,5 +127,10 @@ for it in range(1, n_iters+1):
     print()
 
 # acc data over iterations for plot
-df = pd.DataFrame(test_results)
-df.to_csv(F"testAccRCL_p{args.poisoned_ratio}.csv")
+df_acc     = pd.DataFrame(test_results)
+df_acc_cls = pd.DataFrame(test_results_class)
+df_vio     = pd.DataFrame(violations)
+
+df_acc.to_csv(F"test_fair_accuracy_p{args.poisoned_ratio}.csv")
+df_acc_cls.to_csv(F"test_fair_accuracy_cls_p{args.poisoned_ratio}.csv")
+df_vio.to_csv(F"test_fair_violation_p{args.poisoned_ratio}.csv")

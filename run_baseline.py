@@ -4,7 +4,7 @@ from tensorflow.keras.datasets import mnist
 from label_bias.main import *
 from tracin.main import TracIn
 from tfds.main import make_mnist_dataset, make_femnist_dataset
-from config import args, FAIR_PATH_FORMAT, RCL_SINGLE_PATH, PRETRAINED_PATH
+from config import args, FAIR_PATH_FORMAT, PRETRAINED_PATH
 
 import pandas as pd
 
