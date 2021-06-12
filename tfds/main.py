@@ -6,12 +6,17 @@ import tensorflow as tf
 import tensorflow_datasets as tfds
 from config import args
 
-def corrupt(index, data, corrupt_indices, poisoned_label):
-    if corrupt_indices[index] == 1:
-        return {'correct_label':data['label'], 'label':tf.constant(poisoned_label, tf.int64), 'image': data['image']}
+def corrupt(index, data, corrupt_indices, poisoned_label, to_target=True):
+    if to_target:
+        if corrupt_indices[index] == 1:
+            return {'correct_label':data['label'], 'label':tf.constant(poisoned_label, tf.int64), 'image': data['image']}
+        else:
+            return {'correct_label':data['label'], 'label':data['label'], 'image': data['image']}
     else:
-        return {'correct_label':data['label'], 'label':data['label'], 'image': data['image']}
-    
+        if corrupt_indices[index] != 1:
+            return {'correct_label':data['label'], 'label':tf.constant(poisoned_label, tf.int64), 'image': data['image']}
+        else:
+            return {'correct_label':data['label'], 'label':data['label'], 'image': data['image']}
 
 def normalize(data):
     if 'correct_label' in data:
