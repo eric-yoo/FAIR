@@ -25,10 +25,16 @@ elif args.dataset == 'femnist':
   dataset_maker = make_femnist_dataset
 else:
   raise NotImplementedError
-ds_pretrain = dataset_maker(F'train[:{pretrain_ratio}]', args.batch_size, True, is_poisoned=False)
-ds_train    = dataset_maker(F'train[{pretrain_ratio}:]', args.batch_size, True, is_poisoned=True, poisoned_ratio=args.poisoned_ratio, poisoned_label=args.poisoned_label)
-ds_train_gt = dataset_maker(F'train[{pretrain_ratio}:]', args.batch_size, True, is_poisoned=False)
-ds_test     = dataset_maker('test', args.batch_size, True, is_poisoned=False)
+if args.poison_type == 'many_to_one':
+  ds_pretrain = dataset_maker(F'train[:{pretrain_ratio}]', args.batch_size, True, is_poisoned=False)
+  ds_train    = dataset_maker(F'train[{pretrain_ratio}:]', args.batch_size, True, is_poisoned=True, poisoned_ratio=args.poisoned_ratio, poisoned_label=args.poisoned_label)
+  ds_train_gt = dataset_maker(F'train[{pretrain_ratio}:]', args.batch_size, True, is_poisoned=False)
+  ds_test     = dataset_maker('test', args.batch_size, True, is_poisoned=False)
+else:
+  ds_pretrain = dataset_maker(F'train[:{pretrain_ratio}]', args.batch_size, True, is_poisoned=False)
+  ds_train    = dataset_maker(F'train[{pretrain_ratio}:]', args.batch_size, True, is_poisoned=False, is_reverse_poisoned=True, reverse_poison_ratio=args.poisoned_ratio, reverse_poison_label=args.poisoned_label)
+  ds_train_gt = dataset_maker(F'train[{pretrain_ratio}:]', args.batch_size, True, is_poisoned=False)
+  ds_test     = dataset_maker('test', args.batch_size, True, is_poisoned=False)
 
 print(F'pretrain: {get_length(ds_pretrain)*args.batch_size}')
 print(F'train: {get_length(ds_train)*args.batch_size}')
@@ -64,7 +70,7 @@ violations          = []
 '''
 first, pretrain with small clean data
 '''
-pretrained_model = pretrain_NN(pretrain_xs, pretrain_ys, test_xs, test_ys, pretrain_ratio, n_epochs = args.n_epochs)
+# pretrained_model = pretrain_NN(pretrain_xs, pretrain_ys, test_xs, test_ys, pretrain_ratio, n_epochs = args.n_epochs)
 
 print()
 print()
@@ -121,7 +127,12 @@ for it in range(1, n_iters+1):
           FAIR_PATH_FORMAT.format(it, args.n_epochs), \
           True)
 
-    multipliers_TI = tracin.self_influence_tester(tracin.trackin_train_self_influences)
+    self_influences = tracin.trackin_train_self_influences
+    multipliers_TI = tracin.self_influence_tester(self_influences)
+    
+    if it == n_iters:
+      tracin.show_self_influence(self_influences, np.count_nonzero(multipliers_TI))
+      tracin.report_mislabel_detection(self_influences, 2)
 
     print()
     print()

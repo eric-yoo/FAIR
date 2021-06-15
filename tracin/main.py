@@ -261,24 +261,32 @@ class TracIn:
         self_influence_scores = trackin_self_influence['self_influences']
         indices = np.argsort(-self_influence_scores)
         sorted_scores = np.sort(-self_influence_scores)
+        show_range = (0, -np.min(sorted_scores))
 
-        df = pd.DataFrame(self_influence_scores, columns=['value'])
-        df.hist()
+        plt.figure()
+        plt.hist(-sorted_scores.reshape(-1,), bins=20, range=show_range, \
+                       color="y")
+        plt.hist(-sorted_scores[:topk].reshape(-1,), bins=20, range=show_range, \
+                       color="b")
+        plt.suptitle('Histogram of Self Influence')
+        plt.xlabel("Self Influence")
+        plt.ylabel("Count")
 
-        plt.show()
+        #plt.show()
+        plt.savefig('self_influence_histogram.png')
 
-        #for i, index in enumerate(indices[:topk]):
-            #self.debug('example {} (index: {})'.format(i, index))
-            #self.debug('correct_label: {}, label: {}, prob: {}, predicted_label: {}'.format(
-            #    trackin_self_influence['correct_labels'][index],
-            #    trackin_self_influence['labels'][index], 
-            #    trackin_self_influence['probs'][index][0], 
-            #    trackin_self_influence['predicted_labels'][index][0]))
-            # img = get_image(trackin_self_influence['image_ids'][index])
-            #img = self.trackin_train_self_influences['images'][index].reshape((28,28))
-            #if img is not None:
-            #    plt.imshow(img, interpolation='nearest')
-            #    plt.show()
+        # for i, index in enumerate(indices[:5]):
+        #     self.debug('example {} (index: {})'.format(i, index))
+        #     self.debug('correct_label: {}, label: {}, prob: {}, predicted_label: {}'.format(
+        #        trackin_self_influence['correct_labels'][index],
+        #        trackin_self_influence['labels'][index], 
+        #        trackin_self_influence['probs'][index][0], 
+        #        trackin_self_influence['predicted_labels'][index][0]))
+        #     img = get_image(trackin_self_influence['image_ids'][index])
+        #     img = self.trackin_train_self_influences['images'][index].reshape((28,28))
+        #     if img is not None:
+        #        plt.imshow(img, interpolation='nearest')
+        #        plt.show()
 
     # 1. thresholding, 2. self-influence score 그대로 넘기기
     def self_influence_tester(self, trackin_self_influence, eps = 1e-5):
@@ -291,11 +299,17 @@ class TracIn:
         print(np.count_nonzero(dat))
         
         indices = np.argsort(-self_influence_scores)
+        from datetime import datetime
+        now = datetime.now()
+
         for i in range(5):
-            print('label:',self.trackin_train['labels'][indices[i]], 'pred:', self.trackin_train['predicted_labels'][indices[i]], end=' /')
-            # plt.imshow(self.trackin_train['images'][indices[i]].reshape(28,28))
-            # plt.show()
-        # print(len(selected_indices))
+            label = self.trackin_train['labels'][indices[i]]
+            pred = self.trackin_train['predicted_labels'][indices[i]]
+            print('label:',label, 'pred:', pred, end=' / ')
+            if args.save_data_points:
+                plt.imshow(self.trackin_train['images'][indices[i]].reshape(28,28))
+                plt.savefig(F'tracin_{now}_{i}_label_{label}_pred_{pred}.png')
+
         print()
 
         return dat
@@ -319,9 +333,11 @@ class TracIn:
                 # print(fraction_checked, detected_mislabels)
                 mislabel_detection_report[fraction_checked] = detected_mislabels
         mislabel_detection_report = {round(k,4):round(v/detected_mislabels,4) for k,v in mislabel_detection_report.items()}
-        plt.figure(None)
-        plt.plot(list(mislabel_detection_report.keys()), list(mislabel_detection_report.values()))
-        plt.savefig(F'tracin_on_mnist_biased_towards_{poisoned_label}.png')
+        #plt.figure(None)
+        #plt.plot(list(mislabel_detection_report.keys()), list(mislabel_detection_report.values()))
+        #plt.savefig(F'tracin_on_mnist_biased_towards_{poisoned_label}.png')
+        print(list(mislabel_detection_report.keys()))
+        print(list(mislabel_detection_report.values()))
 
     def report_test_accuracy(self):
         model = self.models[-1]

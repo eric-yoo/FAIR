@@ -14,9 +14,14 @@ elif args.dataset == 'femnist':
 else:
   raise NotImplementedError
 
-ds_train    = dataset_maker(F'train', args.batch_size, True, is_poisoned=True, poisoned_ratio=args.poisoned_ratio, poisoned_label=args.poisoned_label)
-ds_train_gt = dataset_maker(F'train', args.batch_size, True, is_poisoned=False)
-ds_test     = dataset_maker('test', args.batch_size, True, is_poisoned=False)
+if args.poison_type == 'many_to_one':
+  ds_train    = dataset_maker(F'train', args.batch_size, True, is_poisoned=True, poisoned_ratio=args.poisoned_ratio, poisoned_label=args.poisoned_label)
+  ds_train_gt = dataset_maker(F'train', args.batch_size, True, is_poisoned=False)
+  ds_test     = dataset_maker('test', args.batch_size, True, is_poisoned=False)
+else:
+  ds_train    = dataset_maker(F'train', args.batch_size, True, is_poisoned=False, is_reverse_poisoned=True, reverse_poison_ratio=args.poisoned_ratio, reverse_poison_label=args.poisoned_label)
+  ds_train_gt = dataset_maker(F'train', args.batch_size, True, is_poisoned=False)
+  ds_test     = dataset_maker('test', args.batch_size, True, is_poisoned=False)
 
 ### load dataset
 (train_xs, train_ys) = magic_parser(ds_train)
@@ -29,7 +34,7 @@ print("=============== biased MNIST label bias training ===============")
 multipliers = np.zeros(1)
 label_bias_lr = 1.0
 n_iters = 10
-protected_train = [(train_ys == 2)]
+protected_train = [(train_ys == args.poisoned_label)]
 
 # accuracy on {train,test} data over iterations
 train_results       = [] 
@@ -42,7 +47,7 @@ for it in range(1, n_iters+1):
     weights = debias_weights(train_ys, protected_train, multipliers)
     weights = weights / np.sum(weights)
 
-    print("Weights for 2 : {}".format(np.sum(weights[np.where(train_ys==2)])))
+    print("Weights for {} : {}".format(args.poisoned_label, np.sum(weights[np.where(train_ys==args.poisoned_label)])))
 
     # training on corrupted dataset, testing on correct dataset
     train_res, test_res = run_simple_NN(train_xs, train_ys, test_xs, test_ys, weights, \
@@ -53,7 +58,7 @@ for it in range(1, n_iters+1):
     # each res consists of (acc,predictions)
     train_pred = train_res[1]
     
-    violation = np.mean(train_pred == 2) - 0.1
+    violation = np.mean(train_pred == args.poisoned_label) - 0.1
     multipliers -= label_bias_lr * violation
     print("violation: {}".format(violation))
 

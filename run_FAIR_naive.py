@@ -38,9 +38,6 @@ print(F'test: {get_length(ds_test)*args.batch_size}')
 (test_xs, test_ys) = magic_parser(ds_test)
 
 
-### Label bias
-print("=============== Pretraining for stable Tracin ===============")
-
 weights = np.ones(train_xs.shape[0])
 multipliers_TI = np.zeros(train_xs.shape[0])
 fair_lr = 0.03
