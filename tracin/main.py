@@ -10,7 +10,6 @@ from simpleNN import network
 class TracIn:
     def __init__(self, ds_train, ds_test, ckpt1='', ckpt2='', ckpt3='', verbose=True):
         self.verbose = verbose
-        self.strategy = tf.distribute.OneDeviceStrategy(device="/gpu:0")
         
         # dataset
         self.ds_train = ds_train
@@ -64,17 +63,8 @@ class TracIn:
         probs_np = []
         predicted_labels_np = []
         for d in ds:
-            images_replicas, imageids_replicas, loss_grads_replica, activations_replica, labels_replica, probs_replica, predictied_labels_replica = self.strategy.run(self.run, args=(d,))
-            for images, imageids, loss_grads, activations, labels, probs, predicted_labels in zip(
-                self.strategy.experimental_local_results(images_replicas), 
-                self.strategy.experimental_local_results(imageids_replicas), 
-                self.strategy.experimental_local_results(loss_grads_replica),
-                self.strategy.experimental_local_results(activations_replica), 
-                self.strategy.experimental_local_results(labels_replica), 
-                self.strategy.experimental_local_results(probs_replica), 
-                self.strategy.experimental_local_results(predictied_labels_replica)):
-                if imageids.shape[0] == 0:
-                    continue
+            images, imageids, loss_grads, activations, labels, probs, predicted_labels = self.run(d)
+            if imageids.shape[0] != 0:
                 images_np.append(images.numpy())
                 image_ids_np.append(imageids.numpy())
                 loss_grads_np.append(loss_grads.numpy())
@@ -101,23 +91,14 @@ class TracIn:
         predicted_labels_np = []
         correct_labels_np = []
         for d in ds:
-            images_replicas, imageids_replicas, self_influences_replica, labels_replica, probs_replica, predictied_labels_replica, correct_labels_replica = self.strategy.run(self.run_self_influence, args=(d,))  
-            for images, imageids, self_influences, labels, probs, predicted_labels, correct_labels in zip(
-                self.strategy.experimental_local_results(images_replicas), 
-                self.strategy.experimental_local_results(imageids_replicas), 
-                self.strategy.experimental_local_results(self_influences_replica), 
-                self.strategy.experimental_local_results(labels_replica), 
-                self.strategy.experimental_local_results(probs_replica), 
-                self.strategy.experimental_local_results(predictied_labels_replica),
-                self.strategy.experimental_local_results(correct_labels_replica)):
-                if imageids.shape[0] == 0:
-                    continue
+            images, imageids, self_influences, labels, probs, predicted_labels, correct_labels = self.run_self_influence(d)
+            if imageids.shape[0] != 0:
                 images_np.append(images.numpy())
                 image_ids_np.append(imageids.numpy())
                 self_influences_np.append(self_influences.numpy())
                 labels_np.append(labels.numpy())
                 probs_np.append(probs.numpy())
-                predicted_labels_np.append(predicted_labels.numpy()) 
+                predicted_labels_np.append(predicted_labels.numpy())
                 correct_labels_np.append(correct_labels.numpy())
         return {'images': np.concatenate(images_np),
                 'image_ids': np.concatenate(image_ids_np),
